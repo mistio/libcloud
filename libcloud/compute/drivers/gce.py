@@ -2226,7 +2226,7 @@ class GCENodeDriver(NodeDriver):
                      for a in response.get('items', [])]
         return list_data
 
-    def ex_list_subnetworks(self, region=None):
+    def ex_list_subnetworks(self, region=None, filters=None):
         """
         Return the list of subnetworks.
 
@@ -2234,9 +2234,16 @@ class GCENodeDriver(NodeDriver):
                           the aggregated list of subnetworks.
         :type     region: ``str`` or :class:`GCERegion`
 
+        :keyword  filters: The filters to be applied to the request so that
+                           the response only includes data regarding specific
+                           subnetworks.
+        :type     filters: ``dict``
+
         :return: A list of subnetwork objects.
         :rtype: ``list`` of :class:`GCESubnetwork`
         """
+        params = filters or {}
+
         region = self._set_region(region)
         if region is None:
             request = '/aggregated/subnetworks'
@@ -2244,7 +2251,8 @@ class GCENodeDriver(NodeDriver):
             request = '/regions/%s/subnetworks' % (region.name)
 
         list_subnetworks = []
-        response = self.connection.request(request, method='GET').object
+        response = self.connection.request(request, method='GET',
+                                           params=params).object
 
         if 'items' in response:
             if region is None:

@@ -1668,12 +1668,15 @@ class OpenStack_1_1_NodeDriver(OpenStackNodeDriver):
         return self._to_networks(networks)
 
     @_neutron_endpoint
-    def ex_list_subnets(self):
+    def ex_list_subnets(self, filters=None):
         """
         Get a list of Subnets
         :return:
         """
-        subnets = self.connection.request(self._neutron_subnets_url_prefix).object
+        params = filters or {}
+
+        subnets = self.connection.request(self._neutron_subnets_url_prefix,
+                                          params=params).object
         return self._to_subnets(subnets)
 
     @_neutron_endpoint
