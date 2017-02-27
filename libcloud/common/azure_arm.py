@@ -96,7 +96,10 @@ class AzureResourceManagementConnection(ConnectionUserAndKey):
         self.expires_on = js.object["expires_on"]
 
     def connect(self, **kwargs):
-        if (time.time()+300) >= self.expires_on:
+        if self.expires_on:
+            if (time.time()+300) >= int(self.expires_on):
+                self.get_token_from_credentials()
+        else:
             self.get_token_from_credentials()
 
         return super(AzureResourceManagementConnection, self).connect(**kwargs)
@@ -106,8 +109,12 @@ class AzureResourceManagementConnection(ConnectionUserAndKey):
 
         # Log in again if the token has expired or is going to expire soon
         # (next 5 minutes).
-        if (time.time()+300) >= self.expires_on:
+        if self.expires_on:
+            if (time.time()+300) >= int(self.expires_on):
+                self.get_token_from_credentials()
+        else:
             self.get_token_from_credentials()
+
 
         return super(AzureResourceManagementConnection, self).request(action, params=params,
                                                                data=data, headers=headers,
