@@ -196,10 +196,9 @@ class AzureNodeDriver(NodeDriver):
 
     def __init__(self, tenant_id, subscription_id, key, secret,
                  secure=True, host=None, port=None,
-                 api_version=None, region=None, access_token=None, expires_on=None, **kwargs):
+                 api_version=None, region=None, access_token=None, **kwargs):
 
         self.access_token = access_token
-        self.expires_on = expires_on
         self.tenant_id = tenant_id
         self.subscription_id = subscription_id
 
@@ -386,7 +385,7 @@ class AzureNodeDriver(NodeDriver):
         # and fail if we try to use multiprocessing within the same driver.
         def _list_one(node):
             driver = get_driver(self.type)(self.tenant_id, self.subscription_id, self.key, self.secret,
-                                access_token=self.connection.access_token, expires_on=self.connection.expires_on)
+                                access_token=self.connection.access_token)
 
             try:
                 return driver._to_node(node)
@@ -1199,7 +1198,6 @@ class AzureNodeDriver(NodeDriver):
         kwargs = super(AzureNodeDriver, self)._ex_connection_class_kwargs()
         kwargs['tenant_id'] = self.tenant_id
         kwargs['access_token'] = self.access_token
-        kwargs['expires_on'] = self.expires_on
         kwargs['subscription_id'] = self.subscription_id
         return kwargs
 
