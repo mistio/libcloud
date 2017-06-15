@@ -761,6 +761,177 @@ class DockerContainerDriver(ContainerDriver):
 
         return api_version
 
+    # TODO open a pr in libcloud about swarm remote api
+    def list_nodes(self, filters=None):
+        """
+        List nodes
+        Note: Node operations require the engine to be part of a swarm.
+
+        :return:
+
+        List swarm nodes.
+        Args:
+            filters (dict): Filters to process on the nodes list. Valid
+                filters: ``id``, ``name``, ``membership`` and ``role``.
+                Default: ``None``
+        Returns:
+            A list of dictionaries containing data about each swarm node.
+        """
+        payload = {}
+
+        if filters:
+            res = {}
+            # add this in a new util function
+            for k, v in filters.iteritems():
+                if isinstance(v, bool):
+                    v = 'true' if v else 'false'
+                if not isinstance(v, list):
+                    v = [v, ]
+                res[k] = v
+            payload['filters'] = json.dumps(res)
+
+
+        if payload:
+            result = self.connection.request('/v%s/nodes?filters=%s' %
+                                             (self.version, payload[
+                                                 'filters'])).object
+        else:
+            result = self.connection.request('/v%s/nodes' %
+                                             (self.version)).object
+        # TODO raise sth
+        nodes = [self._to_node(value) for value in result]
+        return nodes
+
+    def inspect_node(self, id):
+        """
+
+        :param id:
+        :return:
+        """
+        result = self.connection.request("/v%s/nodes/%s" %
+                                         (self.version, id)).object
+
+        return result
+
+    def remove_node(self, id, force=False):
+        # TODO fix docstrings
+        # untested
+        # Query parameters:
+
+        # force - 1/True/true or 0/False/false, Force remove a node from the
+        # swarm. Default false.
+        """
+        Remove a container
+
+        :param container: The container to be destroyed
+        :type  container: :class:`libcloud.container.base.Container`
+
+        :return: True if the destroy was successful, False otherwise.
+        :rtype: ``bool``
+        """
+
+        payload = {'force': force}
+
+        result = self.connection.request('/v%s/nodes/%s?force=%s' %
+                                         (self.version, id,
+                                          payload['force']),
+                                          method='DELETE')
+        return result.status in VALID_RESPONSE_CODES
+
+    # TODO def update_node
+
+    def inspect_swarm(self):
+        result = self.connection.request("/v%s/swarm" %
+                                         (self.version)).object
+
+        return result
+
+    def init_swarm(self, advertise_addr=None, listen_addr='0.0.0.0:2377',
+                   force_new_cluster=False, swarm_spec=None):
+
+        payload = {
+            "AdvertiseAddr": advertise_addr,
+            "ListenAddr": listen_addr,
+            'ForceNewCluster': force_new_cluster,
+            'Spec': swarm_spec,
+        }
+
+        data = json.dumps(payload)
+
+        result = self.connection.request(
+            '/v%s/swarm/init' % self.version, data=data, method='POST')
+
+        return result.status in VALID_RESPONSE_CODES
+
+    def join_swarm(self, remote_addrs, join_token, listen_addr=None,
+                   advertise_addr=None):
+        payload = {
+            "RemoteAddrs": remote_addrs,
+            "ListenAddr": listen_addr,
+            "JoinToken": join_token,
+            "AdvertiseAddr": advertise_addr,
+        }
+
+        data = json.dumps(payload)
+
+        result = self.connection.request(
+            '/v%s/swarm/join' % self.version, data=data, method='POST')
+
+        return result.status in VALID_RESPONSE_CODES
+
+    def leave_swarm(self, force=False):
+
+        payload = {'force': force}
+
+        result = self.connection.request('/v%s/swarm/leave?force=%s' %
+                                         (self.version, payload['force']),
+                                         method='POST')
+        return result.status in VALID_RESPONSE_CODES
+
+    def _to_node(self, data):
+        """
+        Convert node in Node instance
+        """
+        from libcloud.compute.base import Node, NodeState
+        from libcloud.utils.networking import is_private_subnet
+
+        extra_keys = ['Description', 'ManagerStatus', 'Spec', 'UpdatedAt',
+                      'Version']
+        if 'Status' in data:
+            state = data['Status'].get('State')
+            addr = data['Status'].get('Addr')
+        else:
+            state = NodeState.UNKNOWN
+            addr = ''
+        # TDOD add into extra also
+        created = data['CreatedAt']
+        if isinstance(created, float):
+            created = ts_to_str(created) # FIXME
+
+        hostname = data['Description'].get('Hostname')
+
+        private_ips = []
+        public_ips = []
+        if addr:
+            if is_private_subnet(addr):
+                private_ips.append(addr)
+            else:
+                public_ips.append(addr)
+
+        # TODO Role
+
+        extra = {}
+        for key in extra_keys:
+            if key in data:
+                extra[key] = data[key]
+
+        node = Node(id=data['ID'], name=hostname, state=state,
+                    public_ips=public_ips, private_ips=private_ips,
+                    created_at=created, driver=self.connection.driver,
+                    extra=extra)
+        # is this correct, driver ??
+        return node
+
 
 def ts_to_str(timestamp):
     """
