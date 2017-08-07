@@ -1,11 +1,9 @@
 import json
 import socket
-
-from libcloud.compute.base import (Node, NodeDriver, NodeState,
-                                   KeyPair, NodeLocation, NodeImage)
+import time
+from libcloud.compute.base import (Node, NodeDriver, NodeState)
 from libcloud.common.solusvm import SolusVMConnection
 from libcloud.utils.networking import is_public_subnet
-from libcloud.utils.publickey import get_pubkey_ssh2_fingerprint
 from libcloud.compute.providers import Provider
 
 __all__ = [
@@ -101,7 +99,7 @@ class SolusVMNodeDriver(NodeDriver):
         # attempting to return the real node
         existing_nodes = self.list_nodes()
         try:
-            response = self.connection.request(
+            self.connection.request(
                 "/api/virtual_machines",
                 data=data,
                 headers={
@@ -171,9 +169,9 @@ class SolusVMNodeDriver(NodeDriver):
                  for vm in response.object]
         return nodes
 
-    def ex_list_vs_parameters(self, vttype):
+    def ex_list_a_vs_parameter(self, vttype):
         """
-        Get List of VS Parameters
+        Get List of VS Parameters for a Virtualization Type
 
         vttype can be one of openvz, xen, xenhvm, kvm
 
@@ -181,6 +179,22 @@ class SolusVMNodeDriver(NodeDriver):
         response = self.connection.request("/api/virtual_machines/"
                                            "createvm_params/%s" % vttype)
         return response.object
+
+    def ex_list_vs_parameters(self):
+        """
+        Get List of VS Parameters for Virtualization Types
+
+        """
+        vs_parameters = []
+        for vttype in ['openvz', 'kvm', 'xen', 'xenhvm']:
+            try:
+                params = self.ex_list_a_vs_parameter(vttype)
+                vs_parameters.append(params)
+            except:
+                # Virtualization Type not supported
+                pass
+
+        return vs_parameters
 
     def _to_node(self, data):
         identifier = data['id']
