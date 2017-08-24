@@ -10,6 +10,8 @@ __all__ = [
     "SolusVMNodeDriver"
 ]
 
+API_VERSION = '1.0'
+
 
 class SolusVMNodeDriver(NodeDriver):
     """
@@ -100,7 +102,7 @@ class SolusVMNodeDriver(NodeDriver):
         existing_nodes = self.list_nodes()
         try:
             self.connection.request(
-                "/api/virtual_machines",
+                "/api/v%s/servers" % API_VERSION,
                 data=data,
                 headers={
                     "Content-type": "application/json"},
@@ -122,8 +124,8 @@ class SolusVMNodeDriver(NodeDriver):
         """
         Start a node
         """
-        action = "/api/virtual_machines/{identifier}/boot".format(
-            identifier=node.id)
+        action = "/api/v%s/servers/%s/boot" % (
+            API_VERSION, node.id)
 
         result = self.connection.request(action, method="POST")
         return True if result.status == 201 else False
@@ -132,8 +134,8 @@ class SolusVMNodeDriver(NodeDriver):
         """
         Stop a node
         """
-        action = "/api/virtual_machines/{identifier}/shutdown".format(
-            identifier=node.id)
+        action = "/api/v%s/servers/%s/shutdown" % (
+            API_VERSION, node.id)
 
         result = self.connection.request(action, method="POST")
         return True if result.status == 201 else False
@@ -142,8 +144,8 @@ class SolusVMNodeDriver(NodeDriver):
         """
         Reboot a node
         """
-        action = "/api/virtual_machines/{identifier}/reboot".format(
-            identifier=node.id)
+        action = "/api/v%s/servers/%s/reboot" % (
+            API_VERSION, node.id)
 
         result = self.connection.request(action, method="POST")
         return True if result.status == 201 else False
@@ -152,8 +154,8 @@ class SolusVMNodeDriver(NodeDriver):
         """
         Delete a VS
         """
-        action = "/api/virtual_machines/{identifier}".format(
-            identifier=node.id)
+        action = "/api/v%s/servers/%s" % (
+            API_VERSION, node.id)
 
         self.connection.request(action, method="DELETE")
         return True
@@ -164,8 +166,9 @@ class SolusVMNodeDriver(NodeDriver):
 
         :rtype: ``list`` of :class:`SolusVMNode`
         """
-        response = self.connection.request("/api/virtual_machines")
-        nodes = [self._to_node(vm["virtual_machine"])
+        response = self.connection.request("/api/v%s/servers" %
+                                           API_VERSION)
+        nodes = [self._to_node(vm["server"])
                  for vm in response.object]
         return nodes
 
@@ -176,8 +179,9 @@ class SolusVMNodeDriver(NodeDriver):
         vttype can be one of openvz, xen, xenhvm, kvm
 
         """
-        response = self.connection.request("/api/virtual_machines/"
-                                           "createvm_params/%s" % vttype)
+        response = self.connection.request("/api/v%s/servers/"
+                                           "createvm_params/%s" %
+                                           (API_VERSION, vttype))
         return response.object
 
     def ex_list_vs_parameters(self):
