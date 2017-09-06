@@ -200,6 +200,21 @@ class SolusVMNodeDriver(NodeDriver):
 
         return vs_parameters
 
+    def ex_list_users(self):
+        """
+        Get List of users, if user is Reseller
+
+        """
+        ret = {}
+        try:
+            response = self.connection.request("/api/v%s/users" % API_VERSION)
+            ret['reseller'] = True
+            ret['list_of_users'] = response.object
+        except:
+            ret['reseller'] = False
+
+        return ret
+
     def _to_node(self, data):
         identifier = data['id']
         name = data['hostname']
