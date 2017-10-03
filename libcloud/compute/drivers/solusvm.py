@@ -93,7 +93,7 @@ class SolusVMNodeDriver(NodeDriver):
             bandwidth=bandwidth,
             isos=isos,
         )
-        data = json.dumps({"virtual_machine": server_params})
+        data = json.dumps({"server": server_params})
 
         # upon successfull machine creation,
         # response is 201 with empty body
