@@ -93,7 +93,6 @@ class SolusVMNodeDriver(NodeDriver):
             bandwidth=bandwidth,
             isos=isos,
         )
-
         data = json.dumps({"virtual_machine": server_params})
 
         # upon successfull machine creation,
@@ -248,7 +247,8 @@ class SolusVMNodeDriver(NodeDriver):
         extra['disk'] = data.get('disk')
         extra['memory'] = data.get('ram')
         extra['bandwidth'] = data.get('freebandwidth')
-
+        if data.get('template'):
+            extra['image'] = data.get('template')
         status = data.get('status')
         if status == 'online':
             state = NodeState.RUNNING
