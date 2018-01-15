@@ -860,14 +860,23 @@ XML_CONF_TEMPLATE = '''
   <on_crash>restart</on_crash>
   <devices>
     <disk type='file' device='disk'>
-      <driver name='qemu' type='raw' io='native' cache='none'/>
+      <driver name='qemu' type='raw'/>
       <source file='%s'/>
       <target dev='hda' bus='virtio'/>
     </disk>%s
     <interface type='%s'>
       <source %s='%s'/>
-      <model type='virtio'/>
     </interface>
+    <serial type='pty'>
+      <source path='/dev/pts/3'/>
+      <target port='0'/>
+      <alias name='serial0'/>
+    </serial>
+    <console type='pty' tty='/dev/pts/3'>
+      <source path='/dev/pts/3'/>
+      <target type='serial' port='0'/>
+      <alias name='serial0'/>
+    </console>
     <input type='mouse' bus='ps2'/>
     <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'/>
     <video>
