@@ -437,6 +437,7 @@ class SoftLayerNodeDriver(NodeDriver):
             id=id,
             name=size['name'],
             ram=size['ram'],
+            extra={'cpus': size['cpus']},
             disk=size['disk'],
             bandwidth=size.get('bandwidth'),
             price=self._get_size_price(str(id)),
