@@ -38,6 +38,9 @@ from libcloud.compute.base import NodeState
 from libcloud.compute.types import Provider
 from libcloud.utils.networking import is_public_subnet
 
+import logging
+log = logging.getLogger(__name__)
+
 try:
     import libvirt
     have_libvirt = True
@@ -520,6 +523,11 @@ class LibvirtNodeDriver(NodeDriver):
         and if cloud init specified (or public key) we create an iso through genisoimage that will be used to deploy the
         related cloudinit setting on first boot time
         """
+        env_vars = {
+            "ROLE": "node",
+            "TOKEN": "qwerty.1234567890123456",
+            "MASTER": "192.168.122.236"
+        }
         # name validator, name should be unique
         name = self.ex_name_validator(name)
         # check which case we are on. If both image and disk_path are empty, then fail with error.
@@ -555,7 +563,24 @@ local-hostname: %s''' % (name, name)
                     output = self._run_command('echo "%s" > %s' % (metadata, metadata_file)).get('output')
 
                     if not cloud_init:
-                        cloud_init = "#!/bin/bash\ntouch /tmp/hello"
+                        cloud_init = "#cloud-config"
+
+                    if env_vars:
+                        # remove header
+                        cloud_init_stripped = "\n".join(cloud_init.split("\n")[1:])
+                        vars_template = \
+'''#cloud-config
+write_files:
+-   content: |
+        %s
+    path: /etc/mist.env
+
+'''
+                        init_env = ""
+                        for env_var in env_vars:
+                            init_env += '%s="%s"\n        ' %(env_var, env_vars[env_var])
+
+                        cloud_init = vars_template % init_env + cloud_init_stripped
                     userdata_file = pjoin(directory, 'user-data')
                     output = self._run_command('echo "%s" > %s' % (cloud_init, userdata_file)).get('output')
                     cloudinit_files = '%s %s' % (metadata_file, userdata_file)
@@ -641,11 +666,7 @@ local-hostname: %s''' % (name, name)
             net_type = 'bridge'
             net_name = network
 
-        init_env = ""
-        if env_vars:
-            for env_var in env_vars:
-                init_env += "<initenv name='%s'>%s</initenv>\n" % (env_var, env_vars[env_var])
-        conf = XML_CONF_TEMPLATE % (emu, name, ram, cpu, init_env, disk_path, image_conf, net_type, net_type, net_name)
+        conf = XML_CONF_TEMPLATE % (emu, name, ram, cpu, disk_path, image_conf, net_type, net_type, net_name)
 
         self.connection.defineXML(conf)
 
@@ -855,7 +876,6 @@ XML_CONF_TEMPLATE = '''
    <type arch='x86_64'>hvm</type>
     <boot dev='hd'/>
     <boot dev='cdrom'/>
-    %s
   </os>
  <features>
     <acpi/>
