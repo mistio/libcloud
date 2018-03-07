@@ -523,11 +523,6 @@ class LibvirtNodeDriver(NodeDriver):
         and if cloud init specified (or public key) we create an iso through genisoimage that will be used to deploy the
         related cloudinit setting on first boot time
         """
-        env_vars = {
-            "ROLE": "node",
-            "TOKEN": "qwerty.1234567890123456",
-            "MASTER": "192.168.122.236"
-        }
         # name validator, name should be unique
         name = self.ex_name_validator(name)
         # check which case we are on. If both image and disk_path are empty, then fail with error.
