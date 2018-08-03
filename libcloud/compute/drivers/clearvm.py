@@ -41,7 +41,7 @@ class ClearVmNodeDriver(NodeDriver):
         :rtype: ``list`` of :class:`ClearVmNode`
         """
         # TODO
-        response = self.connection.request("http://xsdemo.com/clearos/clearapi/rest/host/get_all_host")
+        response = self.connection.request("http://xsdemo.com/clearos/clearapi/v2/rest/host/power/on")
         nodes = [self._to_node(host)
                  for host in response.object['data']]
         return nodes
@@ -64,3 +64,15 @@ class ClearVmNodeDriver(NodeDriver):
                     private_ips=private_ips, created_at=data['add_date'],
                     driver=self, extra=extra)
         return node
+
+    def ex_start_node(self, node):
+        params = {"uuid": node.extra['uuid']}
+        res = self.connection.request('http://xsdemo.com/clearos/clearapi/v2/rest/host/power/on',
+                                      params=params, method='POST')
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+    def ex_stop_node(self, node):
+        params = {"uuid": node.extra['uuid']}
+        res = self.connection.request('http://xsdemo.com/clearos/clearapi/v2/rest/host/power/off',
+                                      params=params, method='POST')
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
