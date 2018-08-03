@@ -22,9 +22,7 @@ class ClearVmNodeDriver(NodeDriver):
     NODE_STATE_MAP = {'Active': NodeState.RUNNING,
                       'off': NodeState.OFF}
 
-    def __init__(self, key=None,
-                 uri='https://api.clearsdn.com',
-                 verify=True):
+    def __init__(self, key=None, uri=None,verify=True):
         """
         :param key: apikey
         :param uri: api endpoint
@@ -41,7 +39,7 @@ class ClearVmNodeDriver(NodeDriver):
         :rtype: ``list`` of :class:`ClearVmNode`
         """
         # TODO
-        response = self.connection.request("http://xsdemo.com/clearos/clearapi/v2/rest/host/power/on")
+        response = self.connection.request('/host/get_all_host')
         nodes = [self._to_node(host)
                  for host in response.object['data']]
         return nodes
@@ -67,12 +65,12 @@ class ClearVmNodeDriver(NodeDriver):
 
     def ex_start_node(self, node):
         params = {"uuid": node.extra['uuid']}
-        res = self.connection.request('http://xsdemo.com/clearos/clearapi/v2/rest/host/power/on',
+        res = self.connection.request('/host/power/on',
                                       params=params, method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
     def ex_stop_node(self, node):
         params = {"uuid": node.extra['uuid']}
-        res = self.connection.request('http://xsdemo.com/clearos/clearapi/v2/rest/host/power/off',
+        res = self.connection.request('/host/power/off',
                                       params=params, method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
