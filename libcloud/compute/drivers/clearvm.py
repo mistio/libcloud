@@ -74,3 +74,16 @@ class ClearVmNodeDriver(NodeDriver):
         res = self.connection.request('/host/power/off',
                                       params=params, method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+    def ex_get_host(self, node):
+        params = {"uuid": node.extra['uuid']}
+        response = self.connection.request('/host/get_host',
+                                      params=params, method='POST')
+        if 'data' in response.object:
+            ret = {}
+            ret['id'] = response.object['data']['id']
+            ret['uuid'] = response.object['data']['uuid']
+            ret['power_control_info'] = response.object['data']['power_control_info']
+            ret['power_supply_info'] = response.object['data']['power_supply_info']
+
+        return ret
