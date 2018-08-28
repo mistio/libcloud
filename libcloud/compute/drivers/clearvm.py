@@ -39,7 +39,7 @@ class ClearVmNodeDriver(NodeDriver):
         :rtype: ``list`` of :class:`ClearVmNode`
         """
         # TODO
-        response = self.connection.request('/host/get_all_host')
+        response = self.connection.request('http://xsdemo.com/clearos/clearapi/v2/rest/host/get_all_host')
         nodes = [self._to_node(host)
                  for host in response.object['data']]
         return nodes
