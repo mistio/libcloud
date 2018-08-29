@@ -34,6 +34,7 @@ class ClearVmNodeDriver(NodeDriver):
         host = uri
 
         self.connectionCls.host = host
+        self.connection.host = host
         super(ClearVmNodeDriver, self).__init__(key=key, uri=uri)
 
 
