@@ -33,7 +33,7 @@ class ClearVmNodeDriver(NodeDriver):
 
         host = url
 
-	   # strip the prefix
+       # strip the prefix
         prefixes = ['http://', 'https://']
         for prefix in prefixes:
             if host.startswith(prefix):
@@ -42,7 +42,7 @@ class ClearVmNodeDriver(NodeDriver):
 
         self.connectionCls.host = host
         super(ClearVmNodeDriver, self).__init__(key=key, uri=url)
-	    self.connection.host = host
+        self.connection.host = host
 
     def list_nodes(self):
         """
@@ -50,7 +50,7 @@ class ClearVmNodeDriver(NodeDriver):
 
         :rtype: ``list`` of :class:`ClearVmNode`
         """
-	    data = {"token": self.key}
+        data = {"token": self.key}
         response = self.connection.request('/clearos/clearapi/v2/rest/host/get_all_host', data=data)
         nodes = [self._to_node(host)
                  for host in response.object['data']]
