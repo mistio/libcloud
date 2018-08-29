@@ -22,7 +22,7 @@ class ClearVmNodeDriver(NodeDriver):
     NODE_STATE_MAP = {'Active': NodeState.RUNNING,
                       'off': NodeState.OFF}
 
-    def __init__(self, key=None, uri=None,verify=True):
+    def __init__(self, key=None, url=None,verify=True):
         """
         :param key: apikey
         :param uri: api endpoint
@@ -31,12 +31,18 @@ class ClearVmNodeDriver(NodeDriver):
         if not key:
             raise Exception("Api Key not specified")
 
-        host = uri
+        host = url
+
+	   # strip the prefix
+        prefixes = ['http://', 'https://']
+        for prefix in prefixes:
+            if host.startswith(prefix):
+                host = host.replace(prefix, '')
+        host = host.split('/')[0]
 
         self.connectionCls.host = host
-        self.connection.host = host
-        super(ClearVmNodeDriver, self).__init__(key=key, uri=uri)
-
+        super(ClearVmNodeDriver, self).__init__(key=key, uri=url)
+	    self.connection.host = host
 
     def list_nodes(self):
         """
@@ -44,8 +50,8 @@ class ClearVmNodeDriver(NodeDriver):
 
         :rtype: ``list`` of :class:`ClearVmNode`
         """
-        # TODO
-        response = self.connection.request('/host/get_all_host')
+	    data = {"token": self.key}
+        response = self.connection.request('/clearos/clearapi/v2/rest/host/get_all_host', data=data)
         nodes = [self._to_node(host)
                  for host in response.object['data']]
         return nodes
