@@ -75,7 +75,8 @@ class ClearVmNodeDriver(NodeDriver):
             if key in data:
                 extra[key] = data[key]
 
-        node = Node(id=data['id'], name=data.get('host_name', ''), state=state,
+        # TODO: for now, set as node's name the uuid
+        node = Node(id=data['id'], name=data['uuid'], state=state,
                     private_ips=private_ips, public_ips=[],
                     driver=self, extra=extra)
         return node
