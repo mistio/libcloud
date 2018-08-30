@@ -82,6 +82,7 @@ class ClearVmNodeDriver(NodeDriver):
         response = self.connection.request('/clearos/clearapi/v2/rest/host/power_info',
                                             data=json.dumps(json_data), method='POST')
         power_info = self._get_power_info_dict(response.object['data'])
+        extra.update(power_info)
         node = Node(id=data['id'], name=data['model_name'], state=state,
                     private_ips=private_ips, public_ips=[], created_at=data['add_date'],
                     driver=self, extra=extra)
@@ -117,11 +118,6 @@ class ClearVmNodeDriver(NodeDriver):
     def _get_power_info_dict(data):
         import ipdb; ipdb.set_trace();
         power_info = {}
-        power_info['MinConsumedWatts'] = data['power_control_info'][0]['PowerMetrics']['MinConsumedWatts']
-        power_info['MaxConsumedWatts'] = data['power_control_info'][0]['PowerMetrics']['MaxConsumedWatts']
-        power_info['AverageConsumedWatts'] = data['power_control_info'][0]['PowerMetrics']['AverageConsumedWatts']
-        power_info['PowerCapacityWatts'] = data['power_control_info'][0]['PowerCapacityWatts']
-        power_info['PowerConsumedWatts'] = data['power_control_info'][0]['PowerConsumedWatts']
-        power_info['PowerConsumedWatts'] = data['power_control_info'][0]['PowerConsumedWatts']
-        power_info['Health'] = data['power_supply_info'][0]['Status']['Health']
-        #power_info['LastPowerOutputWatts'] = data['power_supply_info'][0]['Status']['Health']
+        power_info['power_control_info'] = data['power_control_info'][0]
+        power_info['power_supply_info'] = data['power_supply_info'][0]
+        return power_info
