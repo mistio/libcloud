@@ -58,7 +58,7 @@ class ClearVmNodeDriver(NodeDriver):
 
 
     def _to_node(self, data):
-        extra_keys = ['model_name', 'serial_number', 'cpu_usages', 'ram', 'created_at',
+        extra_keys = ['model_name', 'serial_number', 'cpu_usages', 'ram', 'add_date',
                       'ram_usages', 'uuid', 'added_by', 'company_id', 'product_id']
 
         extra = {}
