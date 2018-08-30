@@ -114,7 +114,6 @@ class ClearVmNodeDriver(NodeDriver):
 
     @staticmethod
     def _get_power_info_dict(data):
-        import ipdb; ipdb.set_trace();
         power_info = {}
         power_info['power_control_info'] = data['power_control_info'][0]
         power_info['power_supply_info'] = data['power_supply_info'][0]
