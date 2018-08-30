@@ -51,11 +51,9 @@ class ClearVmNodeDriver(NodeDriver):
 
         :rtype: ``list`` of :class:`ClearVmNode`
         """
-	import ipdb; ipdb.set_trace();
 
-	data = {"token": self.key}
-        response = self.connection.request('/clearos/clearapi/v2/rest/host/get_all_host', data=data)
-        nodes = [self._to_node(host)
+        response = self.connection.request('/clearos/clearapi/v2/rest/host/get_all_host')
+	nodes = [self._to_node(host)
                  for host in response.object['data']]
         return nodes
 
@@ -64,17 +62,21 @@ class ClearVmNodeDriver(NodeDriver):
         extra_keys = ['model_name', 'serial_number', 'cpu_usages', 'ram',
                       'ram_usages', 'uuid', 'added_by', 'company_id', 'product_id']
 
+	extra = {}
         private_ips = []
         private_ips.append(data['ipv4'])
 
-        state = NODE_STATE_MAP.get(data['status'])
+        if data['status'] == 'Active':
+            state = NodeState.RUNNING
+        else:
+            state = NodeState.STOPPED
 
         for key in extra_keys:
             if key in data:
                 extra[key] = data[key]
 
-        node = Node(id=data['id'], name=data['host_name'], state=state,
-                    private_ips=private_ips, created_at=data['add_date'],
+        node = Node(id=data['id'], name=data.get('host_name', ''), state=state,
+                    private_ips=private_ips, public_ips=[],
                     driver=self, extra=extra)
         return node
 

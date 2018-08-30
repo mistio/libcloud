@@ -39,7 +39,7 @@ class ClearVmConnection(ConnectionKey):
 
         This method adds apikey to the request.
         """
-
-        headers['Authorization'] = 'Bearer %s' % (self.key)
+	import ipdb; ipdb.set_trace();
+        headers['X-Authorization'] = 'Bearer %s' % (self.key)
         headers['Content-Type'] = 'application/json'
         return headers
