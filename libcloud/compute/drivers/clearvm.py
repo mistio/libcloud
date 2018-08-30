@@ -76,8 +76,6 @@ class ClearVmNodeDriver(NodeDriver):
             if key in data:
                 extra[key] = data[key]
 
-        import ipdb; ipdb.set_trace();
-
         json_data = {"uuid": data['uuid']}
         response = self.connection.request('/clearos/clearapi/v2/rest/host/power_info',
                                             data=json.dumps(json_data), method='POST')
