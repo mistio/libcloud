@@ -118,3 +118,10 @@ class ClearVmNodeDriver(NodeDriver):
         import ipdb; ipdb.set_trace();
         power_info = {}
         power_info['MinConsumedWatts'] = data['power_control_info'][0]['PowerMetrics']['MinConsumedWatts']
+        power_info['MaxConsumedWatts'] = data['power_control_info'][0]['PowerMetrics']['MaxConsumedWatts']
+        power_info['AverageConsumedWatts'] = data['power_control_info'][0]['PowerMetrics']['AverageConsumedWatts']
+        power_info['PowerCapacityWatts'] = data['power_control_info'][0]['PowerCapacityWatts']
+        power_info['PowerConsumedWatts'] = data['power_control_info'][0]['PowerConsumedWatts']
+        power_info['PowerConsumedWatts'] = data['power_control_info'][0]['PowerConsumedWatts']
+        power_info['Health'] = data['power_supply_info'][0]['Status']['Health']
+        #power_info['LastPowerOutputWatts'] = data['power_supply_info'][0]['Status']['Health']
