@@ -5,7 +5,6 @@ from libcloud.common.base import JsonResponse
 from libcloud.common.base import ConnectionKey
 
 
-
 class ClearVmResponse(JsonResponse):
     valid_response_codes = [httplib.OK, httplib.ACCEPTED, httplib.CREATED,
                             httplib.NO_CONTENT]

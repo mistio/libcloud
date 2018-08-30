@@ -33,7 +33,7 @@ class ClearVmNodeDriver(NodeDriver):
 
         host = url
 
-	# strip the prefix
+       # strip the prefix
         prefixes = ['http://', 'https://']
         for prefix in prefixes:
             if host.startswith(prefix):
@@ -41,9 +41,8 @@ class ClearVmNodeDriver(NodeDriver):
         host = host.split('/')[0]
 
         self.connectionCls.host = host
-	#self.connection.host = host
         super(ClearVmNodeDriver, self).__init__(key=key, uri=url)
-	self.connection.host = host
+        self.connection.host = host
 
     def list_nodes(self):
         """
@@ -54,6 +53,7 @@ class ClearVmNodeDriver(NodeDriver):
 
         response = self.connection.request('/clearos/clearapi/v2/rest/host/get_all_host')
 	nodes = [self._to_node(host)
+
                  for host in response.object['data']]
         return nodes
 
@@ -82,19 +82,19 @@ class ClearVmNodeDriver(NodeDriver):
 
     def ex_start_node(self, node):
         params = {"uuid": node.extra['uuid']}
-        res = self.connection.request('/host/power/on',
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/power/on',
                                       params=params, method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
     def ex_stop_node(self, node):
         params = {"uuid": node.extra['uuid']}
-        res = self.connection.request('/host/power/off',
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/power/off',
                                       params=params, method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
     def ex_get_host(self, node):
         params = {"uuid": node.extra['uuid']}
-        response = self.connection.request('/host/get_host',
+        response = self.connection.request('/clearos/clearapi/v2/rest/host/get_host',
                                       params=params, method='POST')
         if 'data' in response.object:
             ret = {}
