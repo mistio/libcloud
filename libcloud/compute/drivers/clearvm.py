@@ -52,8 +52,7 @@ class ClearVmNodeDriver(NodeDriver):
         """
 
         response = self.connection.request('/clearos/clearapi/v2/rest/host/get_all_host')
-	nodes = [self._to_node(host)
-
+        nodes = [self._to_node(host)
                  for host in response.object['data']]
         return nodes
 
@@ -62,7 +61,7 @@ class ClearVmNodeDriver(NodeDriver):
         extra_keys = ['model_name', 'serial_number', 'cpu_usages', 'ram',
                       'ram_usages', 'uuid', 'added_by', 'company_id', 'product_id']
 
-	extra = {}
+        extra = {}
         private_ips = []
         private_ips.append(data['ipv4'])
 
@@ -76,8 +75,8 @@ class ClearVmNodeDriver(NodeDriver):
                 extra[key] = data[key]
 
         # TODO: for now, set as node's name the uuid
-        node = Node(id=data['id'], name=data['uuid'], state=state,
-                    private_ips=private_ips, public_ips=[],
+        node = Node(id=data['id'], name=data['model_name'], state=state,
+                    private_ips=private_ips, public_ips=[], created_at=data['add_date'],
                     driver=self, extra=extra)
         return node
 
