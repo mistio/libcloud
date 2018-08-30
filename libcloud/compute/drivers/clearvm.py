@@ -90,19 +90,19 @@ class ClearVmNodeDriver(NodeDriver):
     def ex_start_node(self, node):
         data = {"uuid": node.extra['uuid']}
         res = self.connection.request('/clearos/clearapi/v2/rest/host/power/on',
-                                      data=data, method='POST')
+                                      data=json.dumps(data), method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
     def ex_stop_node(self, node):
         data = {"uuid": node.extra['uuid']}
         res = self.connection.request('/clearos/clearapi/v2/rest/host/power/off',
-                                      data=data, method='POST')
+                                      data=json.dumps(data), method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
     def ex_get_host(self, node):
         data = {"uuid": node.extra['uuid']}
         response = self.connection.request('/clearos/clearapi/v2/rest/host/get_host',
-                                      data=data, method='POST')
+                                      data=json.dumps(data), method='POST')
         if 'data' in response.object:
             ret = {}
             ret['id'] = response.object['data']['id']
