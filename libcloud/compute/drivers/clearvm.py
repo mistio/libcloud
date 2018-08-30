@@ -74,7 +74,12 @@ class ClearVmNodeDriver(NodeDriver):
             if key in data:
                 extra[key] = data[key]
 
-        # TODO: for now, set as node's name the uuid
+        import ipdb; ipdb.set_trace();
+
+        data = {"uuid": node.extra['uuid']}
+        response = self.connection.request('/clearos/clearapi/v2/rest/host/power_info',
+                                            data=data, method='POST')
+
         node = Node(id=data['id'], name=data['model_name'], state=state,
                     private_ips=private_ips, public_ips=[], created_at=data['add_date'],
                     driver=self, extra=extra)
