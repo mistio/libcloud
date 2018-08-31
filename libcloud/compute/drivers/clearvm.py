@@ -77,10 +77,7 @@ class ClearVmNodeDriver(NodeDriver):
                 extra[key] = data[key]
 
         json_data = {"uuid": data['uuid']}
-        response = self.connection.request('/clearos/clearapi/v2/rest/host/power_info',
-                                            data=json.dumps(json_data), method='POST')
-        power_info = self._get_power_info_dict(response.object['data'])
-        extra.update(power_info)
+
         node = Node(id=data['id'], name=data['model_name'], state=state,
                     private_ips=private_ips, public_ips=[], created_at=data['add_date'],
                     driver=self, extra=extra)
@@ -111,10 +108,3 @@ class ClearVmNodeDriver(NodeDriver):
             ret['power_supply_info'] = response.object['data']['power_supply_info']
 
         return ret
-
-    @staticmethod
-    def _get_power_info_dict(data):
-        power_info = {}
-        power_info['power_control_info'] = data['power_control_info'][0]
-        power_info['power_supply_info'] = data['power_supply_info'][0]
-        return power_info
