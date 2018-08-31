@@ -61,8 +61,7 @@ class ClearVmNodeDriver(NodeDriver):
 
     def _to_node(self, data):
         extra_keys = ['model_name', 'serial_number', 'cpu_usages', 'ram', 'add_date',
-                      'ram_usages', 'uuid', 'added_by', 'company_id', 'product_id',
-                      'power_control_info', 'power_supply_info']
+                      'ram_usages', 'uuid', 'added_by', 'company_id', 'product_id']
 
         extra = {}
         private_ips = []
@@ -76,6 +75,9 @@ class ClearVmNodeDriver(NodeDriver):
         for key in extra_keys:
             if key in data:
                 extra[key] = data[key]
+
+        extra.update(data['power_control_info'][0])
+        extra.update(data['power_supply_info'][0])
 
         json_data = {"uuid": data['uuid']}
 
