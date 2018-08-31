@@ -61,7 +61,8 @@ class ClearVmNodeDriver(NodeDriver):
 
     def _to_node(self, data):
         extra_keys = ['model_name', 'serial_number', 'cpu_usages', 'ram', 'add_date',
-                      'ram_usages', 'uuid', 'added_by', 'company_id', 'product_id']
+                      'ram_usages', 'uuid', 'added_by', 'company_id', 'product_id',
+                      'power_control_info', 'power_supply_info']
 
         extra = {}
         private_ips = []
