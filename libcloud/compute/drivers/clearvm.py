@@ -76,8 +76,8 @@ class ClearVmNodeDriver(NodeDriver):
             if key in data:
                 extra[key] = data[key]
 
-        extra.update(data['power_control_info'][0])
-        extra.update(data['power_supply_info'][0])
+        extra['power_control_info'] = data['power_control_info'][0]
+        extra['power_supply_info'] = data['power_supply_info'][0]
 
         json_data = {"uuid": data['uuid']}
 
