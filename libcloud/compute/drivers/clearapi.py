@@ -1,8 +1,11 @@
+import json
+
+from io import BytesIO
+
 from libcloud.compute.base import Node, NodeDriver
 from libcloud.common.clearapi import ClearAPIConnection
 from libcloud.compute.types import Provider, NodeState
 
-import json
 
 
 __all__ = [
@@ -55,7 +58,6 @@ class ClearAPINodeDriver(NodeDriver):
                  for host in response.object['data']]
         return nodes
 
-
     def _to_node(self, data):
         extra = {}
         private_ips = []
@@ -77,15 +79,12 @@ class ClearAPINodeDriver(NodeDriver):
         return node
 
 
-    def ex_start_node(self, node):
-        data = {"uuid": node.extra['uuid']}
-        res = self.connection.request('/clearos/clearapi/v2/rest/host/power/on',
-                                      data=json.dumps(data), method='POST')
-        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
-
-    def ex_stop_node(self, node):
-        data = {"uuid": node.extra['uuid']}
-        res = self.connection.request('/clearos/clearapi/v2/rest/host/power/off',
+    def ex_power_reset(self, node, reset_type):
+        data = {
+            "uuid": node.extra['uuid'],
+            "reset_type": reset_type
+        }
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/power_reset',
                                       data=json.dumps(data), method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
@@ -101,3 +100,38 @@ class ClearAPINodeDriver(NodeDriver):
             ret['power_supply_info'] = response.object['data']['power_supply_info']
 
         return ret
+
+    def ex_upload_firmware(self, node, zipe_file):
+        files={'zip_file': BytesIO(zip_file_body)}
+        data = {
+            "uuid": node.extra['uuid']
+        }
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/upload_firmware',
+                                      files=files, data=json.dumps(data), method='POST')
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+    def ex_put_firmware(self, node, firmware_id):
+        data = {
+            "uuid": node.extra['uuid'],
+            "firmware_id": firmware_id
+        }
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/put_firmware',
+                                      data=json.dumps(data), method='POST')
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+    def ex_delete_firmware(self, node, firmware_id):
+        data = {
+            "uuid": node.extra['uuid'],
+            "firmware_id": firmware_id
+        }
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/delete_firmware',
+                                      data=json.dumps(data), method='POST')
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+    def ex_backup_firmware(self, node):
+        data = {
+            "uuid": node.extra['uuid']
+        }
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/backup_firmware',
+                                      data=json.dumps(data), method='POST')
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
