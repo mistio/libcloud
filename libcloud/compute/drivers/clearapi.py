@@ -1,4 +1,5 @@
 import json
+import httplib
 
 from io import BytesIO
 
