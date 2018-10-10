@@ -199,7 +199,7 @@ class LibcloudConnection(LibcloudBaseConnection):
         return self.ca_cert if self.ca_cert is not None else self.verify
 
     def request(self, method, url, body=None, headers=None, raw=False,
-                stream=False):
+                stream=False, files=None):
         url = urlparse.urljoin(self.host, url)
         # all headers should be strings
         for header, value in headers.items():
@@ -212,17 +212,18 @@ class LibcloudConnection(LibcloudBaseConnection):
             headers=headers,
             allow_redirects=ALLOW_REDIRECTS,
             stream=stream,
+            files=files,
             verify=self.verification
         )
 
     def prepared_request(self, method, url, body=None,
-                         headers=None, raw=False, stream=False):
+                         headers=None, raw=False, stream=False, files=None):
         # all headers should be strings
         for header, value in headers.items():
             if isinstance(headers[header], int):
                 headers[header] = str(value)
         req = requests.Request(method, ''.join([self.host, url]),
-                               data=body, headers=headers)
+                               data=body, headers=headers, files=files)
 
         prepped = self.session.prepare_request(req)
 

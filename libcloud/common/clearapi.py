@@ -39,5 +39,5 @@ class ClearAPIConnection(ConnectionKey):
         This method adds apikey to the request.
         """
         headers['X-Authorization'] = 'Bearer %s' % (self.key)
-        headers['Content-Type'] = 'application/json'
+        # headers['Content-Type'] = 'application/json'
         return headers

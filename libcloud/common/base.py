@@ -481,7 +481,7 @@ class Connection(object):
         self.ua.append(token)
 
     def request(self, action, params=None, data=None, headers=None,
-                method='GET', raw=False, stream=False):
+                method='GET', raw=False, stream=False, files=None):
         """
         Request a given `action`.
 
@@ -498,6 +498,9 @@ class Connection(object):
 
         :type data: ``unicode``
         :param data: A body of data to send with the request.
+
+        :type files: ``unicode``
+        :param files: Files to upload with the request.
 
         :type headers: ``dict``
         :param headers: Extra headers to add to the request
@@ -587,7 +590,8 @@ class Connection(object):
                     url=url,
                     body=data,
                     headers=headers,
-                    stream=stream)
+                    stream=stream,
+                    files=files)
             else:
                 if retry_enabled:
                     retry_request = retry(timeout=self.timeout,
@@ -597,10 +601,12 @@ class Connection(object):
                                                            url=url,
                                                            body=data,
                                                            headers=headers,
-                                                           stream=stream)
+                                                           stream=stream,
+                                                           files=files)
                 else:
                     self.connection.request(method=method, url=url, body=data,
-                                            headers=headers, stream=stream)
+                                            headers=headers, stream=stream,
+                                            files=files)
         except socket.gaierror:
             e = sys.exc_info()[1]
             message = str(e)

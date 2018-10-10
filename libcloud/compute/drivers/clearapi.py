@@ -102,13 +102,13 @@ class ClearAPINodeDriver(NodeDriver):
 
         return ret
 
-    def ex_upload_firmware(self, node, zipe_file):
-        files={'zip_file': BytesIO(zip_file_body)}
+    def ex_upload_firmware(self, node, zip_file):
+        files={'zip_file': zip_file}
         data = {
             "uuid": node.extra['uuid']
         }
         res = self.connection.request('/clearos/clearapi/v2/rest/host/upload_firmware',
-                                      files=files, data=json.dumps(data), method='POST')
+                                      files=files, data=data, method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
     def ex_put_firmware(self, node, firmware_id):
@@ -133,6 +133,6 @@ class ClearAPINodeDriver(NodeDriver):
         data = {
             "uuid": node.extra['uuid']
         }
-        res = self.connection.request('/clearos/clearapi/v2/rest/host/backup_firmware',
+        res = self.connection.request('/clearos/clearapi/v2/rest/host/take_backup_firmware',
                                       data=json.dumps(data), method='POST')
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
