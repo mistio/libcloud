@@ -1503,10 +1503,22 @@ class AzureNodeDriver(NodeDriver):
 
         return response
 
-    def _perform_post(self, path, body, response_type=None, async=False):
+    def _perform_post(self, path, body, response_type=None):
         request = AzureHTTPRequest()
         request.method = 'POST'
-        request.host = azure_service_management_host
+        request.host = AZURE_SERVICE_MANAGEMENT_HOST
+        request.path = path
+        request.body = ensure_string(self._get_request_body(body))
+        request.path, request.query = self._update_request_uri_query(request)
+        request.headers = self._update_management_header(request)
+        response = self._perform_request(request)
+
+        return response
+
+    def _perform_put(self, path, body, response_type=None):
+        request = AzureHTTPRequest()
+        request.method = 'PUT'
+        request.host = AZURE_SERVICE_MANAGEMENT_HOST
         request.path = path
         request.body = self._get_request_body(body)
         request.path, request.query = \
@@ -1516,7 +1528,7 @@ class AzureNodeDriver(NodeDriver):
 
         return response
 
-    def _perform_delete(self, path, async=False):
+    def _perform_delete(self, path):
         request = AzureHTTPRequest()
         request.method = 'DELETE'
         request.host = azure_service_management_host
@@ -1529,10 +1541,7 @@ class AzureNodeDriver(NodeDriver):
             raise LibcloudError('Message: %s, Body: %s, Status code: %d' %
                                 (response.error, response.body, response.status), driver=self)
 
-        if async:
-            return self._parse_response_for_async_op(response)
-
-        return None
+        return response
 
     def _perform_request(self, request):
         try:
