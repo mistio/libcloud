@@ -150,7 +150,7 @@ DRIVERS = {
     Provider.CLEARCENTER:
     ('libcloud.compute.drivers.clearcenter', 'ClearCenterNodeDriver'),
     Provider.CLEARAPI:
-    ('libcloud.compute.drivers.clearapi', 'ClearAPINodeDriver')
+    ('libcloud.compute.drivers.clearapi', 'ClearAPINodeDriver'),
     Provider.UPCLOUD:
     ('libcloud.compute.drivers.upcloud', 'UpcloudDriver'),
     Provider.NTTCIS:

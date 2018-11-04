@@ -695,6 +695,7 @@ class AzureNodeDriver(NodeDriver):
                         }
                     ]
                 }
+            }
         elif isinstance(auth, NodeAuthPassword):
             if not "windows" in image.id.lower():
                 data["properties"]["osProfile"]["linuxConfiguration"] = {
