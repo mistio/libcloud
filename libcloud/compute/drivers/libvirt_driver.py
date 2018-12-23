@@ -115,7 +115,7 @@ class LibvirtNodeDriver(NodeDriver):
                 # if ssh key is string create temp file
                 if not os.path.isfile(ssh_key):
                     key_temp_file = NamedTemporaryFile(delete=False)
-                    key_temp_file.write(ssh_key)
+                    key_temp_file.write(ssh_key.encode())
                     key_temp_file.close()
                     self.secret = key_temp_file.name
                     self.temp_key = self.secret
@@ -607,7 +607,7 @@ class LibvirtNodeDriver(NodeDriver):
                     ip, gw = net.get('ip'), net.get('gateway')
                     if not is_valid_ip_address(ip):
                         raise ValueError("Invalid IPv4 address %s" % ip)
-                    if gw and not is_valid_ip_address(gateway):
+                    if gw and not is_valid_ip_address(gw):
                         raise ValueError("Invalid IPv4 address for GW %s" % gw)
                     name = net['network_name']
                     cidr = self._ex_get_cidr_from_network_name(name)
@@ -1068,7 +1068,7 @@ run %s
             except Exception as exc:
                 log.warn('Failed to run "%s" at %s: %r', cmd, self.host, exc)
 
-        return {'output': output, 'error': error}
+        return {'output': output.decode(), 'error': error.decode()}
 
     def disconnect(self):
         # Close the libvirt connection to the hypevisor.
