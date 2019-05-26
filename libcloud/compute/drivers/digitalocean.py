@@ -141,7 +141,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         return list(map(self._to_volume, data))
 
     def create_node(self, name, size, image, location, ex_create_attr=None,
-                    ex_ssh_key_ids=None, ex_user_data=None):
+                    ex_ssh_key_ids=None, ex_user_data=None, ex_volumes=[]):
         """
         Create a node.
 
@@ -173,8 +173,10 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         :return: The newly created node.
         :rtype: :class:`Node`
         """
+        import ipdb; ipdb.set_trace()
         attr = {'name': name, 'size': size.name, 'image': image.id,
-                'region': location.id, 'user_data': ex_user_data}
+                'region': location.id, 'user_data': ex_user_data,
+                'volumes': ex_volumes}
 
         if ex_ssh_key_ids:
             warnings.warn("The ex_ssh_key_ids parameter has been deprecated in"
