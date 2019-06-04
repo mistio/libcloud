@@ -1,4 +1,4 @@
-from libcloud.compute.base import Node, NodeDriver, NodeLocation
+from libcloud.compute.base import Node, NodeDriver, NodeLocation, NodeSize
 from libcloud.common.maxihost import MaxihostConnection
 from libcloud.compute.types import Provider, NodeState
 
@@ -56,7 +56,6 @@ class MaxihostNodeDriver(NodeDriver):
 
         If available is True, show only locations which are available
         """
-        import ipdb; ipdb.set_trace();
         locations = []
         data = self.connection.request('/regions')
         for location in data.object['regions']:
@@ -72,3 +71,21 @@ class MaxihostNodeDriver(NodeDriver):
         country = data.get('location').get('country', '')
         return NodeLocation(id=data['slug'], name=data['name'], country=None,
                             extra=extra, driver=self)
+
+    def list_sizes(self):
+        """
+        List sizes
+        """
+        sizes = []
+        data = self.connection.request('/plans')
+        for size in data.object['servers']:
+                sizes.append(self._to_size(size))
+        return sizes
+
+    def _to_size(self, data):
+        extra = {'vcpus': data['specs']['cpus']['count'],
+                 'regions': data['regions'],
+                 'pricing': data['pricing']}
+        return NodeSize(id=data['id'], name=data['slug'], ram=data['specs']['memory']['total'],
+                        disk=None, bandwidth=None,
+                        price=data['pricing'], driver=self, extra=extra)

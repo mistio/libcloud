@@ -218,7 +218,10 @@ def _list_async(driver):
         params = {'hostname': name, 'plan': size.id,
                   'operating_system': image.id, 'facility': facility,
                   'include': 'plan', 'billing_cycle': 'hourly'}
-        params.update(kwargs)
+        #params.update({ "ip_addresses": [{'address_family': 4, 'public': False, 'cidr': 30}, {'address_family': 4, 'public': True, 'cidr': 29}]})
+        #params.update({'ip_addresses': [{'address_family': 4, 'public': False}, {'address_family': 4, 'public': True, 'cidr': 29}]})
+        #params.update({ "ip_addresses": [{ "address_family": 4, "public": False }] })
+        #params.update(kwargs)
         if cloud_init:
             params["userdata"] = cloud_init
         data = self.connection.request('/projects/%s/devices' %
