@@ -67,6 +67,7 @@ def get_driver(drivers, provider, deprecated_providers=None,
                (old_name, new_name, url))
         raise Exception(msg)
 
+    import ipdb; ipdb.set_trace();
     if provider in drivers:
         mod_name, driver_name = drivers[provider]
         _mod = __import__(mod_name, globals(), locals(), [driver_name])
