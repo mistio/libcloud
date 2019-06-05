@@ -28,7 +28,6 @@ class MaxihostNodeDriver(NodeDriver):
         :return: The newly created node.
         :rtype: :class:`Node`
         """
-        import ipdb; ipdb.set_trace()
         attr = {'hostname': name, 'plan': size.id, 'operating_system': image.id,
                 'facility': location.id.lower(), 'billing_cycle': 'monthly'}
         try:
@@ -38,7 +37,9 @@ class MaxihostNodeDriver(NodeDriver):
             error_message = exc.message.get('error_messages', '')
             raise ValueError('Failed to create node: %s' % (error_message))
 
-        return self._to_node(data=data)
+        import ipdb; ipdb.set_trace()
+
+        return res.object
 
 
     def list_nodes(self):
@@ -89,9 +90,10 @@ class MaxihostNodeDriver(NodeDriver):
         return locations
     
     def _to_location(self, data):
+        name = data.get('location').get('city', '')
         extra = {'features': data.get('features', [])}
         country = data.get('location').get('country', '')
-        return NodeLocation(id=data['slug'], name=data['name'], country=None,
+        return NodeLocation(id=data['slug'], name=name, country=None,
                             extra=extra, driver=self)
 
     def list_sizes(self):
@@ -105,7 +107,7 @@ class MaxihostNodeDriver(NodeDriver):
         return sizes
 
     def _to_size(self, data):
-        extra = {'vcpus': data['specs']['cpus']['count'],
+        extra = {'specs': data['specs'],
                  'regions': data['regions'],
                  'pricing': data['pricing']}
         return NodeSize(id=data['slug'], name=data['name'], ram=data['specs']['memory']['total'],
