@@ -1,4 +1,4 @@
-from libcloud.compute.base import Node, NodeDriver, NodeLocation, NodeSize
+from libcloud.compute.base import Node, NodeDriver, NodeLocation, NodeSize, NodeImage
 from libcloud.common.maxihost import MaxihostConnection
 from libcloud.compute.types import Provider, NodeState
 
@@ -89,3 +89,23 @@ class MaxihostNodeDriver(NodeDriver):
         return NodeSize(id=data['id'], name=data['slug'], ram=data['specs']['memory']['total'],
                         disk=None, bandwidth=None,
                         price=data['pricing'], driver=self, extra=extra)
+
+    def list_images(self):
+        """
+        List images
+        """
+        images = []
+        data = self.connection.request('/plans/operating-systems')
+        import ipdb;ipdb.set_trace()
+        for image in data.object['operating-systems']:
+                images.append(self._to_image(image))
+        return images
+
+    def _to_image(self, data):
+        extra = {'operating_system': data['operating_system'],
+                 'slug': data['slug'],
+                 'distro': data['distro'],
+                 'version': data['version'],
+                 'pricing': data['pricing']}
+        return NodeImage(id=data['id'], name=data['name'], driver=self,
+                         extra=extra)
