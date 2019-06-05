@@ -46,11 +46,14 @@ class MaxihostNodeDriver(NodeDriver):
 
     def ex_start_node(self, node):
         params = {"type": "power_on"}
-        try:
-            res = self.connection.request('/devices/%s/actions' % node.id, params=params, method='PUT')
-        except BaseHTTPError as exc:
-            error_message = exc.message.get('error_messages', '')
-            raise ValueError('Failed to start node: %s' % (error_message))
+        res = self.connection.request('/devices/%s/actions' % node.id, params=params, method='PUT')
+
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+    def ex_stop_node(self, node):
+        params = {"type": "power_off"}
+        res = self.connection.request('/devices/%s/actions' % node.id, params=params, method='PUT')
+
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
 
