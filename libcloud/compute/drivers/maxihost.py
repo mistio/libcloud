@@ -4,6 +4,9 @@ from libcloud.compute.types import Provider, NodeState
 
 from  libcloud.common.exceptions import BaseHTTPError
 
+from libcloud.utils.py3 import httplib
+
+
 import json
 
 
@@ -40,6 +43,15 @@ class MaxihostNodeDriver(NodeDriver):
         import ipdb; ipdb.set_trace()
 
         return res.object
+
+    def ex_start_node(self, node):
+        params = {"type": "power_on"}
+        try:
+            res = self.connection.request('/devices/%s/actions' % node.id, params=params, method='PUT')
+        except BaseHTTPError as exc:
+            error_message = exc.message.get('error_messages', '')
+            raise ValueError('Failed to start node: %s' % (error_message))
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
 
     def list_nodes(self):
