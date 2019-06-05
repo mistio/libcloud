@@ -2,6 +2,8 @@ from libcloud.compute.base import Node, NodeDriver, NodeLocation, NodeSize, Node
 from libcloud.common.maxihost import MaxihostConnection
 from libcloud.compute.types import Provider, NodeState
 
+from  libcloud.common.exceptions import BaseHTTPError
+
 import json
 
 
@@ -17,6 +19,26 @@ class MaxihostNodeDriver(NodeDriver):
     connectionCls = MaxihostConnection
     type = Provider.MAXIHOST
     name = 'Maxihost'
+
+    def create_node(self, name, size, image, location,
+                    ex_ssh_key_ids=None):
+        """
+        Create a node.
+
+        :return: The newly created node.
+        :rtype: :class:`Node`
+        """
+        import ipdb; ipdb.set_trace()
+        attr = {'hostname': name, 'plan': size.id, 'operating_system': image.id,
+                'facility': location.id.lower(), 'billing_cycle': 'monthly'}
+        try:
+            res = self.connection.request('/devices',
+                                        params=attr, method='POST')
+        except BaseHTTPError as exc:
+            error_message = exc.message.get('error_messages', '')
+            raise ValueError('Failed to create node: %s' % (error_message))
+
+        return self._to_node(data=data)
 
 
     def list_nodes(self):
@@ -86,7 +108,7 @@ class MaxihostNodeDriver(NodeDriver):
         extra = {'vcpus': data['specs']['cpus']['count'],
                  'regions': data['regions'],
                  'pricing': data['pricing']}
-        return NodeSize(id=data['id'], name=data['slug'], ram=data['specs']['memory']['total'],
+        return NodeSize(id=data['slug'], name=data['name'], ram=data['specs']['memory']['total'],
                         disk=None, bandwidth=None,
                         price=data['pricing'], driver=self, extra=extra)
 
@@ -96,16 +118,14 @@ class MaxihostNodeDriver(NodeDriver):
         """
         images = []
         data = self.connection.request('/plans/operating-systems')
-        import ipdb;ipdb.set_trace()
         for image in data.object['operating-systems']:
                 images.append(self._to_image(image))
         return images
 
     def _to_image(self, data):
         extra = {'operating_system': data['operating_system'],
-                 'slug': data['slug'],
                  'distro': data['distro'],
                  'version': data['version'],
                  'pricing': data['pricing']}
-        return NodeImage(id=data['id'], name=data['name'], driver=self,
+        return NodeImage(id=data['slug'], name=data['name'], driver=self,
                          extra=extra)
