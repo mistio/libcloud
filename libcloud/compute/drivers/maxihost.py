@@ -50,8 +50,16 @@ class MaxihostNodeDriver(NodeDriver):
 
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
+
     def ex_stop_node(self, node):
         params = {"type": "power_off"}
+        res = self.connection.request('/devices/%s/actions' % node.id, params=params, method='PUT')
+
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+
+    def reboot_node(self, node):
+        params = {"type": "power_cycle"}
         res = self.connection.request('/devices/%s/actions' % node.id, params=params, method='PUT')
 
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
@@ -71,8 +79,13 @@ class MaxihostNodeDriver(NodeDriver):
 
     def _to_node(self, data):
         extra = {}
-        #private_ips = []
-        #private_ips.append(data['ipv4'])
+        private_ips = []
+        public_ips = []
+        for ip in data['ips']:
+            if 'Private' in ip['ip_description']:
+                private_ips.append(ip['ip_address'])
+            else:
+                public_ips.append(ip['ip_address'])
 
         if data['power_status']:
             state = NodeState.RUNNING
@@ -84,7 +97,7 @@ class MaxihostNodeDriver(NodeDriver):
 
         # TODO: Fix public and private ips
         node = Node(id=data['id'], name=data['description'], state=state,
-                    private_ips=[], public_ips=[],
+                    private_ips=private_ips, public_ips=public_ips,
                     driver=self, extra=extra)
         return node
         
