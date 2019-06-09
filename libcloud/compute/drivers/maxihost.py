@@ -42,8 +42,6 @@ class MaxihostNodeDriver(NodeDriver):
             error_message = exc.message.get('error_messages', '')
             raise ValueError('Failed to create node: %s' % (error_message))
 
-        import ipdb; ipdb.set_trace()
-
         return res.object
 
     def ex_start_node(self, node):
