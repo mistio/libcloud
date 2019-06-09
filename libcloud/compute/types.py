@@ -141,6 +141,7 @@ class Provider(Type):
     KTUCLOUD = 'ktucloud'
     LIBVIRT = 'libvirt'
     LINODE = 'linode'
+    MAXIHOST = 'maxihost'
     MEDONE = 'medone'
     NEPHOSCALE = 'nephoscale'
     NIMBUS = 'nimbus'
@@ -215,6 +216,7 @@ class Provider(Type):
     # Removed
     # SLICEHOST = 'slicehost'
 
+    MAXIHOST = "maxihost"
 
 DEPRECATED_RACKSPACE_PROVIDERS = [Provider.RACKSPACE_UK,
                                   Provider.RACKSPACE_NOVA_BETA,
