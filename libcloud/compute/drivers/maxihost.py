@@ -1,4 +1,5 @@
 from libcloud.compute.base import Node, NodeDriver, NodeLocation, NodeSize, NodeImage
+from libcloud.compute.base import KeyPair
 from libcloud.common.maxihost import MaxihostConnection
 from libcloud.compute.types import Provider, NodeState
 
@@ -32,7 +33,8 @@ class MaxihostNodeDriver(NodeDriver):
         :rtype: :class:`Node`
         """
         attr = {'hostname': name, 'plan': size.id, 'operating_system': image.id,
-                'facility': location.id.lower(), 'billing_cycle': 'monthly'}
+                'facility': location.id.lower(), 'billing_cycle': 'monthly',
+                'ex_ssh_key_ids': ex_ssh_key_ids}
         try:
             res = self.connection.request('/devices',
                                         params=attr, method='POST')
@@ -159,3 +161,24 @@ class MaxihostNodeDriver(NodeDriver):
                  'pricing': data['pricing']}
         return NodeImage(id=data['slug'], name=data['name'], driver=self,
                          extra=extra)
+
+
+    def list_key_pairs(self):
+        """
+        List all the available SSH keys.
+
+        :return: Available SSH keys.
+        :rtype: ``list`` of :class:`KeyPair`
+        """
+        data = self.connection.request('/account/keys')
+        return list(map(self._to_key_pair, data.object['ssh_keys']))
+
+
+    def _to_key_pair(self, data):
+        extra = {'id': data['id']}
+        return KeyPair(name=data['name'],
+                       fingerprint=data['fingerprint'],
+                       public_key=data['public_key'],
+                       private_key=None,
+                       driver=self,
+                       extra=extra)
