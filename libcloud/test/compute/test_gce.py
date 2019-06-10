@@ -32,6 +32,7 @@ from libcloud.common.google import (GoogleBaseAuthConnection,
                                     GoogleBaseError)
 from libcloud.test.common.test_google import GoogleAuthMockHttp, GoogleTestCase
 from libcloud.compute.base import Node, StorageVolume
+from libcloud.compute.types import NodeState
 
 from libcloud.test import MockHttp
 from libcloud.test.compute import TestCaseMixin
@@ -616,8 +617,12 @@ class GCENodeDriverTest(GoogleTestCase, TestCaseMixin):
         self.assertEqual(len(nodes_uc1a), 1)
         self.assertEqual(nodes[0].name, 'node-name')
         self.assertEqual(nodes_uc1a[0].name, 'node-name')
+
         names = [n.name for n in nodes_all]
         self.assertTrue('node-name' in names)
+
+        states = [n.state for n in nodes_all]
+        self.assertTrue(NodeState.SUSPENDED in states)
 
     def test_ex_list_regions(self):
         regions = self.driver.ex_list_regions()
@@ -1385,8 +1390,11 @@ class GCENodeDriverTest(GoogleTestCase, TestCaseMixin):
         size = self.driver.ex_get_size('n1-standard-1')
         number = 2
         disk_size = "25"
+        # NOTE: We use small poll_interval to speed up the tests
         nodes = self.driver.ex_create_multiple_nodes(base_name, size, image,
-                                                     number, ex_disk_size=disk_size)
+                                                     number,
+                                                     ex_disk_size=disk_size,
+                                                     poll_interval=0.1)
         self.assertEqual(len(nodes), 2)
         self.assertTrue(isinstance(nodes[0], Node))
         self.assertTrue(isinstance(nodes[1], Node))
@@ -1400,8 +1408,10 @@ class GCENodeDriverTest(GoogleTestCase, TestCaseMixin):
         image = None
         size = self.driver.ex_get_size('n1-standard-1')
         number = 2
+        # NOTE: We use small poll_interval to speed up the tests
         nodes = self.driver.ex_create_multiple_nodes(
-            base_name, size, image, number, ex_image_family='coreos-stable')
+            base_name, size, image, number, ex_image_family='coreos-stable',
+            poll_interval=0.1)
         self.assertEqual(len(nodes), 2)
         self.assertTrue(isinstance(nodes[0], Node))
         self.assertTrue(isinstance(nodes[1], Node))
