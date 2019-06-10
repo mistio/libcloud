@@ -333,7 +333,7 @@ class GCELicense(UuidMixin, LazyObject):
             request = '/global/licenses/%s' % self.name
             response = self.driver.connection.request(request,
                                                       method='GET').object
-        except:
+        except Exception:
             raise
         finally:
             # Restore the connection request_path
@@ -1730,6 +1730,7 @@ class GCENodeDriver(NodeDriver):
         "STAGING": NodeState.PENDING,
         "RUNNING": NodeState.RUNNING,
         "STOPPING": NodeState.PENDING,
+        "SUSPENDED": NodeState.SUSPENDED,
         "TERMINATED": NodeState.STOPPED,
         "UNKNOWN": NodeState.UNKNOWN
     }
@@ -2315,7 +2316,7 @@ class GCENodeDriver(NodeDriver):
                 image_list.extend(
                     self.ex_list_project_images(ex_project=img_proj,
                                                 ex_include_deprecated=dep))
-            except:
+            except Exception:
                 # do not break if an OS type is invalid
                 pass
         return image_list
@@ -2360,7 +2361,7 @@ class GCENodeDriver(NodeDriver):
                 try:
                     response = self.connection.request(request,
                                                        method='GET').object
-                except:
+                except Exception:
                     raise
                 finally:
                     # Restore the connection request_path
@@ -6524,7 +6525,7 @@ class GCENodeDriver(NodeDriver):
 
                 try:
                     timestamp_to_datetime(value)
-                except:
+                except Exception:
                     raise ValueError('%s must be an RFC3339 timestamp' %
                                      attribute)
                 image_data[attribute] = value
@@ -8805,8 +8806,10 @@ class GCENodeDriver(NodeDriver):
             extra['image'] = image
         size = self._get_components_from_path(node['machineType'])['name']
 
+        state = self.NODE_STATE_MAP.get(node['status'], NodeState.UNKNOWN)
+
         return Node(id=node['id'], name=node['name'],
-                    state=self.NODE_STATE_MAP[node['status']],
+                    state=state,
                     public_ips=public_ips, private_ips=private_ips,
                     driver=self, size=size, image=image, extra=extra)
 
@@ -8832,7 +8835,7 @@ class GCENodeDriver(NodeDriver):
                                        extra['zone'].name.split("-")[0])
             price = self._get_size_price(size_id=machine_type['name'])
             self.api_name = orig_api_name
-        except:
+        except Exception:
             price = None
 
         return GCENodeSize(id=machine_type['id'], name=machine_type['name'],
