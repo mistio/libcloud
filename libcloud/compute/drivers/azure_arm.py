@@ -918,7 +918,7 @@ class AzureNodeDriver(NodeDriver):
             'sourceUri': snapshot.id
         }
         data = {
-            'location': location.id,
+            'location': location,
             'tags': tags,
             'properties': {
                 'creationData': creation_data,
