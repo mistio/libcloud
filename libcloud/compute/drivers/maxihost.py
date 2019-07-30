@@ -73,7 +73,8 @@ class MaxihostNodeDriver(NodeDriver):
 
         :rtype: ``list`` of :class:`MaxihostNode`
         """
-        response = self.connection.request('/devices')
+        import ipdb; ipdb.set_trace()
+        response = self.connection.request('/devices', method='GET')
         nodes = [self._to_node(host)
                  for host in response.object['devices']]
         return nodes
@@ -120,11 +121,10 @@ class MaxihostNodeDriver(NodeDriver):
         return locations
     
     def _to_location(self, data):
-        name = data.get('location').get('city', '')
-        extra = {'features': data.get('features', [])}
+        name = data.get('name')
         country = data.get('location').get('country', '')
         return NodeLocation(id=data['slug'], name=name, country=None,
-                            extra=extra, driver=self)
+                            driver=self)
 
     def list_sizes(self):
         """
