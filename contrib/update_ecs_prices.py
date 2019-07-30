@@ -9,7 +9,7 @@ import json
 import simplejson
 import sys
 import time
-#import urllib2
+import urllib2
 import utils
 import requests
 
@@ -28,7 +28,6 @@ def main(argv):
 
     # Download the current Aliyun ECS pricing.
     res = requests.get(ALIYUN_ECS_PRICES)
-    import ipdb; ipdb.set_trace();
     if 'pricingInfo' not in res.json().keys():
         sys.stderr.write('Pricing info is missing \n')
         sys.exit(1)

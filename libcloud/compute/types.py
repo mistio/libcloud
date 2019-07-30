@@ -141,7 +141,6 @@ class Provider(Type):
     KTUCLOUD = 'ktucloud'
     LIBVIRT = 'libvirt'
     LINODE = 'linode'
-    MAXIHOST = 'maxihost'
     MEDONE = 'medone'
     NEPHOSCALE = 'nephoscale'
     NIMBUS = 'nimbus'
