@@ -11,6 +11,8 @@ from libcloud.utils.py3 import httplib
 import json
 
 
+# TODO: Implement create_key
+
 __all__ = [
     "MaxihostNodeDriver"
 ]
@@ -28,23 +30,27 @@ class MaxihostNodeDriver(NodeDriver):
                     ex_ssh_key_ids=None):
         """
         Create a node.
-
         :return: The newly created node.
         :rtype: :class:`Node`
         """
-        attr = {'hostname': name, 'plan': size.id, 'operating_system': image.id,
-                'facility': location.id.lower(), 'billing_cycle': 'monthly',
-                'ex_ssh_key_ids': ex_ssh_key_ids}
+        attr = {'hostname': name, 'plan': size.id,
+                'operating_system': image.id,
+                'facility': location.id.lower(), 'billing_cycle': 'monthly'}
+
+        if ex_ssh_key_ids:
+            attr['ssh_keys'] = ex_ssh_key_ids
+
         try:
             res = self.connection.request('/devices',
-                                        params=attr, method='POST')
+                                          params=attr, method='POST')
         except BaseHTTPError as exc:
             error_message = exc.message.get('error_messages', '')
             raise ValueError('Failed to create node: %s' % (error_message))
 
-        import ipdb; ipdb.set_trace()
+        node = Node(id=0, name='dummy', private_ips=[], public_ips=[], driver=self, state='unknown', extra={})
+        return node
+        #return self._to_node(res.object['devices'][0])
 
-        return res.object
 
     def ex_start_node(self, node):
         params = {"type": "power_on"}
@@ -56,6 +62,19 @@ class MaxihostNodeDriver(NodeDriver):
     def ex_stop_node(self, node):
         params = {"type": "power_off"}
         res = self.connection.request('/devices/%s/actions' % node.id, params=params, method='PUT')
+
+        return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
+
+    def destroy_node(self, node):
+        """
+        Destroy a node.
+        """
+        try:
+            res = self.connection.request('/devices/%s' % node.id,
+                                        method='DELETE')
+        except BaseHTTPError as exc:
+            error_message = exc.message.get('error_messages', '')
+            raise ValueError('Failed to create node: %s' % (error_message))
 
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
@@ -73,7 +92,6 @@ class MaxihostNodeDriver(NodeDriver):
 
         :rtype: ``list`` of :class:`MaxihostNode`
         """
-        import ipdb; ipdb.set_trace()
         response = self.connection.request('/devices', method='GET')
         nodes = [self._to_node(host)
                  for host in response.object['devices']]
@@ -121,7 +139,7 @@ class MaxihostNodeDriver(NodeDriver):
         return locations
     
     def _to_location(self, data):
-        name = data.get('name')
+        name = data.get('location').get('city', '')
         country = data.get('location').get('country', '')
         return NodeLocation(id=data['slug'], name=name, country=None,
                             driver=self)
