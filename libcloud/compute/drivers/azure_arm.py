@@ -34,6 +34,7 @@ from libcloud.compute.types import (NodeState, StorageVolumeState,
                                     VolumeSnapshotState)
 from libcloud.common.types import LibcloudError
 from libcloud.storage.types import ObjectDoesNotExistError
+from libcloud.storage.types import ContainerDoesNotExistError
 from libcloud.common.exceptions import BaseHTTPError
 from libcloud.storage.drivers.azure_blobs import AzureBlobsStorageDriver
 from libcloud.utils.py3 import basestring
@@ -790,7 +791,7 @@ class AzureNodeDriver(NodeDriver):
         # failed to clean up its related resources, so it isn't taken as a
         # failure.
         try:
-            self.connection.request(node.id,
+            self.connection.request(node.extra['id'],
                                     params={"api-version": "2015-06-15"},
                                     method='DELETE')
         except BaseHTTPError as h:
@@ -809,7 +810,7 @@ class AzureNodeDriver(NodeDriver):
             try:
                 time.sleep(ex_poll_wait)
                 self.connection.request(
-                    node.id,
+                    node.extra['id'],
                     params={"api-version": RESOURCE_API_VERSION})
                 retries -= 1
             except BaseHTTPError as h:
@@ -820,24 +821,27 @@ class AzureNodeDriver(NodeDriver):
                     raise
 
         # Optionally clean up the network interfaces that were attached to this node.
-        if ex_destroy_nic:
-            for nic in interfaces:
-                retries = ex_poll_qty
-                while retries > 0:
-                    try:
-                        self.ex_destroy_nic(self._to_nic(nic))
-                        break
-                    except BaseHTTPError as h:
-                        retries -= 1
-                        if (h.code == 400 and
-                                h.message.startswith("[NicInUse]") and
-                                retries > 0):
-                            time.sleep(ex_poll_wait)
-                        else:
-                            raise
+        # if ex_destroy_nic:
+        #     for nic in interfaces:
+        #         retries = ex_poll_qty
+        #         while retries > 0:
+        #             try:
+        #                 self.ex_destroy_nic(self._to_nic(nic))
+        #                 break
+        #             except BaseHTTPError as h:
+        #                 retries -= 1
+        #                 if (h.code == 400 and
+        #                         h.message.startswith("[NicInUse]") and
+        #                         retries > 0):
+        #                     time.sleep(ex_poll_wait)
+        #                 else:
+        #                     raise
 
         # Optionally clean up OS disk VHD.
-        vhd = node.extra["properties"]["storageProfile"]["osDisk"].get("vhd")
+        try:
+            vhd = node.extra["properties"]["storageProfile"]["osDisk"].get("vhd")
+        except KeyError:
+            vhd = None
         if ex_destroy_vhd and vhd is not None:
             retries = ex_poll_qty
             resourceGroup = node.id.split("/")[4]
@@ -2139,6 +2143,8 @@ class AzureNodeDriver(NodeDriver):
             return blobdriver.delete_object(
                 blobdriver.get_object(blobContainer, blob))
         except ObjectDoesNotExistError:
+            return True
+        except ContainerDoesNotExistError:
             return True
 
     def _ex_connection_class_kwargs(self):
