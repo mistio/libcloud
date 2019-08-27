@@ -331,7 +331,6 @@ class AzureNodeDriver(NodeDriver):
         """
 
         images = []
-
         if location is None:
             locations = [self.default_location]
         else:
@@ -600,6 +599,11 @@ class AzureNodeDriver(NodeDriver):
                  "/Microsoft.Compute/virtualMachines/%s" % \
                  (self.subscription_id, ex_resource_group, name)
 
+        if 'windows' in image.name.lower():
+            os_type = 'windows'
+        else:
+            os_type = 'linux'
+
         if isinstance(image, AzureVhdImage):
             instance_vhd = self._get_instance_vhd(
                 name=name,
@@ -609,7 +613,7 @@ class AzureNodeDriver(NodeDriver):
             storage_profile = {
                 "osDisk": {
                     "name": name,
-                    "osType": "linux",
+                    "osType": os_type,
                     "caching": "ReadWrite",
                     "createOption": "FromImage",
                     "image": {
@@ -634,7 +638,7 @@ class AzureNodeDriver(NodeDriver):
                 },
                 "osDisk": {
                     "name": name,
-                    "osType": "linux",
+                    "osType": os_type,
                     "caching": "ReadWrite",
                     "createOption": "FromImage"
                 }
