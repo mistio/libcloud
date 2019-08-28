@@ -71,7 +71,7 @@ class MaxihostNodeDriver(NodeDriver):
                                         method='DELETE')
         except BaseHTTPError as exc:
             error_message = exc.message.get('error_messages', '')
-            raise ValueError('Failed to create node: %s' % (error_message))
+            raise ValueError('Failed to destroy node: %s' % (error_message))
 
         return res.status in [httplib.OK, httplib.CREATED, httplib.ACCEPTED]
 
