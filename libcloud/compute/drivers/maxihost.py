@@ -11,8 +11,6 @@ from libcloud.utils.py3 import httplib
 import json
 
 
-# TODO: Implement create_key
-
 __all__ = [
     "MaxihostNodeDriver"
 ]
@@ -49,7 +47,6 @@ class MaxihostNodeDriver(NodeDriver):
 
         node = Node(id=0, name='dummy', private_ips=[], public_ips=[], driver=self, state='unknown', extra={})
         return node
-        #return self._to_node(res.object['devices'][0])
 
 
     def ex_start_node(self, node):
@@ -116,7 +113,6 @@ class MaxihostNodeDriver(NodeDriver):
         for key in data:
             extra[key] = data[key]
 
-        # TODO: Fix public and private ips
         node = Node(id=data['id'], name=data['description'], state=state,
                     private_ips=private_ips, public_ips=public_ips,
                     driver=self, extra=extra)
