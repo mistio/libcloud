@@ -156,11 +156,10 @@ class MaxihostNodeDriver(NodeDriver):
 
     def _to_size(self, data):
         extra = {'specs': data['specs'],
-                 'regions': data['regions'],
-                 'pricing': data['pricing']}
+                 'regions': data['regions']}
         return NodeSize(id=data['slug'], name=data['name'], ram=data['specs']['memory']['total'],
                         disk=None, bandwidth=None,
-                        price=data['pricing'], driver=self, extra=extra)
+                        price=None, driver=self, extra=extra)
 
     def list_images(self):
         """
