@@ -843,21 +843,23 @@ class AzureNodeDriver(NodeDriver):
                     raise
 
         # Optionally clean up the network interfaces that were attached to this node.
-        # if ex_destroy_nic:
-        #     for nic in interfaces:
-        #         retries = ex_poll_qty
-        #         while retries > 0:
-        #             try:
-        #                 self.ex_destroy_nic(self._to_nic(nic))
-        #                 break
-        #             except BaseHTTPError as h:
-        #                 retries -= 1
-        #                 if (h.code == 400 and
-        #                         h.message.startswith("[NicInUse]") and
-        #                         retries > 0):
-        #                     time.sleep(ex_poll_wait)
-        #                 else:
-        #                     raise
+        # interfaces that were attached to this node.
+        interfaces = node.extra["properties"]["networkProfile"]["networkInterfaces"]
+        if ex_destroy_nic:
+            for nic in interfaces:
+                retries = ex_poll_qty
+                while retries > 0:
+                    try:
+                        self.ex_destroy_nic(self._to_nic(nic))
+                        break
+                    except BaseHTTPError as h:
+                        retries -= 1
+                        if (h.code == 400 and
+                                h.message.startswith("[NicInUse]") and
+                                retries > 0):
+                            time.sleep(ex_poll_wait)
+                        else:
+                            raise
 
         # Optionally clean up OS disk VHD.
         try:
