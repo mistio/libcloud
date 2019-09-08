@@ -664,17 +664,23 @@ class AzureNodeDriver(NodeDriver):
                 "Unknown image type %s, expected one of AzureImage, "
                 "AzureVhdImage." % type(image))
         data_disks = []
+        used_luns = []
         for disk in ex_data_disks:
             disk_name = disk.get('name')
             disk_size = disk.get('size')
-            lun = disk.get('lun')
+            free_luns = [lun for lun in range(0, 63) if lun not in used_luns]
+            if len(free_luns) > 0:
+                lun = free_luns[0]
+            else:
+                raise LibcloudError("No LUN available to attach new disk.")
+            used_luns.append(lun)
             caching = disk.get('caching', None)
             instance_vhd_dd = self._get_instance_vhd(
                         name=name,
                         ex_resource_group=ex_resource_group,
                         ex_storage_account=ex_storage_account,
                         ex_blob_container=ex_blob_container, disk_name=disk_name)
-            data_disk = {"createOption": "Empty", "name": disk_name, "lun": lun, "diskSizeGB": disk_size, 'caching': caching, 'vhd': {'uri': instance_vhd_dd}}
+            data_disk = {"createOption": "Empty", "name": disk_name, "diskSizeGB": disk_size, 'caching': caching, 'lun': lun, 'vhd': {'uri': instance_vhd_dd}}
             data_disks.append(data_disk)
 
         storage_profile.update({'dataDisks': data_disks})
@@ -844,7 +850,10 @@ class AzureNodeDriver(NodeDriver):
 
         # Optionally clean up the network interfaces that were attached to this node.
         # interfaces that were attached to this node.
-        interfaces = node.extra["properties"]["networkProfile"]["networkInterfaces"]
+        try:
+            interfaces = node.extra["properties"]["networkProfile"]["networkInterfaces"]
+        except KeyError:
+            interfaces = []
         if ex_destroy_nic:
             for nic in interfaces:
                 retries = ex_poll_qty
@@ -1030,7 +1039,7 @@ class AzureNodeDriver(NodeDriver):
         """
         action = node.extra['id']
         location = node.extra['location']
-        disks = node.extra['properties']['storageProfile']['dataDisks']
+        disks = node.extra['storageProfile']['dataDisks']
 
         if ex_lun is None:
             # find the smallest unused logical unit number
@@ -1050,11 +1059,16 @@ class AzureNodeDriver(NodeDriver):
                 'vhd': {'uri': ex_vhd_uri},
             }
         else:
-            # attach existing managed disk
+            # attach existing blob disk
             new_disk = {
                 'lun': ex_lun,
                 'createOption': 'attach',
-                'managedDisk': {'id': volume.id}}
+                "vhd": {
+                        "uri": volume.extra.get('properties').get('creationData').get('sourceUri'),
+                    },
+                'name': volume.name
+                #'managedDisk': {'id': volume.id
+                }
 
         disks.append(new_disk)
         self.connection.request(
@@ -1082,7 +1096,7 @@ class AzureNodeDriver(NodeDriver):
 
         action = ex_node.extra['id']
         location = ex_node.extra['location']
-        disks = ex_node.extra['properties']['storageProfile']['dataDisks']
+        disks = ex_node.extra['storageProfile']['dataDisks']
 
         # remove volume from `properties.storageProfile.dataDisks`
         disks[:] = [
