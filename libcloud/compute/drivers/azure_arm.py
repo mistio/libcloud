@@ -1049,18 +1049,14 @@ class AzureNodeDriver(NodeDriver):
                 'diskSizeGB': volume.size,
                 'lun': ex_lun,
                 'createOption': 'empty' if ex_vhd_create else 'attach',
-                'vhd': {'uri': ex_vhd_uri},
+                'managedDisk': {'id': volume.extra['id']},
             }
         else:
-            # attach existing blob disk
+            # attach existing managed disk
             new_disk = {
                 'lun': ex_lun,
                 'createOption': 'attach',
-                "vhd": {
-                        "uri": volume.extra.get('properties').get('creationData').get('sourceUri'),
-                    },
-                'name': volume.name
-                #'managedDisk': {'id': volume.id
+                'managedDisk': {'id': volume.extra['id']},
                 }
 
         disks.append(new_disk)
