@@ -906,7 +906,7 @@ class AzureNodeDriver(NodeDriver):
         return True
 
     def create_volume(self, size, name, location=None, snapshot=None,
-                      ex_resource_group=None, ex_account_type=None,
+                      ex_resource_group=None, ex_storage_account_type='Standard_LRS',
                       ex_tags=None):
         """
         Create a new managed volume.
@@ -927,9 +927,9 @@ class AzureNodeDriver(NodeDriver):
             create the volume. (required)
         :type ex_resource_group: ``str``
 
-        :param ex_account_type: The Storage Account type,
+        :param ex_storage_account_type: The Storage Account type,
             ``Standard_LRS``(HDD disks) or ``Premium_LRS``(SSD disks).
-        :type ex_account_type: ``str``
+        :type ex_storage_account_type: ``str``
 
         :param ex_tags: Optional tags to associate with this resource.
         :type ex_tags: ``dict``
@@ -965,14 +965,15 @@ class AzureNodeDriver(NodeDriver):
             'properties': {
                 'creationData': creation_data,
                 'diskSizeGB': size
-            }
+            },
+            'sku': {'name': ex_storage_account_type}
         }
 
         response = self.connection.request(
             action,
             method='PUT',
             params={
-                'api-version': RESOURCE_API_VERSION,
+                'api-version': '2018-04-01',
             },
             data=data
         )
