@@ -67,7 +67,7 @@ locations_mapping = {
 
 
 
-RESOURCE_API_VERSION = '2018-04-01'
+RESOURCE_API_VERSION = '2016-04-30-preview'
 
 
 class AzureImage(NodeImage):
@@ -742,7 +742,7 @@ class AzureNodeDriver(NodeDriver):
 
         r = self.connection.request(
             target,
-            params={"api-version": RESOURCE_API_VERSION},
+            params={"api-version": '2018-04-01'},
             data=data,
             method="PUT")
 
