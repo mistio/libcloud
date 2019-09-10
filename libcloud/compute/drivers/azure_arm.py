@@ -665,18 +665,28 @@ class AzureNodeDriver(NodeDriver):
         data_disks = []
         used_luns = []
         for disk in ex_data_disks:
-            disk_name = disk.get('name')
-            disk_size = disk.get('size')
-            disk_type = disk.get('storage_account_type')
             free_luns = [lun for lun in range(0, 63) if lun not in used_luns]
             if len(free_luns) > 0:
                 lun = free_luns[0]
             else:
                 raise LibcloudError("No LUN available to attach new disk.")
             used_luns.append(lun)
-            caching = disk.get('caching', None)
-            data_disk = {"createOption": "Empty", "name": disk_name, "diskSizeGB": disk_size, 'caching': caching, 'lun': lun, 'managedDisk': {'storageAccountType': disk_type}}
-            data_disks.append(data_disk)
+
+            if disk.get('id'):  # existing disk
+                existing_disk = {
+                    'lun': lun,
+                    'createOption': 'attach',
+                    'managedDisk': {'id': disk.get('id')},
+                }
+                data_disks.append(existing_disk)
+
+            else:   # new disk
+                disk_name = disk.get('name')
+                disk_size = disk.get('size')
+                disk_type = disk.get('storage_account_type')
+                caching = disk.get('caching', None)
+                new_disk = {"createOption": "Empty", "name": disk_name, "diskSizeGB": disk_size, 'caching': caching, 'lun': lun, 'managedDisk': {'storageAccountType': disk_type}}
+                data_disks.append(new_disk)
 
         storage_profile.update({'dataDisks': data_disks})
 
