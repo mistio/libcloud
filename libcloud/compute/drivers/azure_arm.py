@@ -67,7 +67,7 @@ locations_mapping = {
 
 
 
-RESOURCE_API_VERSION = '2016-04-30-preview'
+RESOURCE_API_VERSION = '2018-04-01'
 
 
 class AzureImage(NodeImage):
@@ -575,7 +575,6 @@ class AzureNodeDriver(NodeDriver):
         :return: The newly created node.
         :rtype: :class:`.Node`
         """
-
         if location is None:
             location = self.default_location
         if ex_nic is None:
@@ -639,7 +638,7 @@ class AzureNodeDriver(NodeDriver):
                     "version": image.version
                 },
                 "osDisk": {
-                    "name": name,
+                    "name": name + '-osDisk',
                     "osType": os_type,
                     "caching": "ReadWrite",
                     "createOption": "FromImage"
@@ -675,12 +674,7 @@ class AzureNodeDriver(NodeDriver):
                 raise LibcloudError("No LUN available to attach new disk.")
             used_luns.append(lun)
             caching = disk.get('caching', None)
-            instance_vhd_dd = self._get_instance_vhd(
-                        name=name,
-                        ex_resource_group=ex_resource_group,
-                        ex_storage_account=ex_storage_account,
-                        ex_blob_container=ex_blob_container, disk_name=disk_name)
-            data_disk = {"createOption": "Empty", "name": disk_name, "diskSizeGB": disk_size, 'caching': caching, 'lun': lun, 'vhd': {'uri': instance_vhd_dd}}
+            data_disk = {"createOption": "Empty", "name": disk_name, "diskSizeGB": disk_size, 'caching': caching, 'lun': lun, 'managedDisk': {'storageAccountType': ex_storage_account_type}}
             data_disks.append(data_disk)
 
         storage_profile.update({'dataDisks': data_disks})
@@ -962,8 +956,6 @@ class AzureNodeDriver(NodeDriver):
                 'diskSizeGB': size
             }
         }
-        if ex_account_type is not None:
-            data['properties']['accountType'] = ex_account_type
 
         response = self.connection.request(
             action,
@@ -2082,7 +2074,6 @@ class AzureNodeDriver(NodeDriver):
                  % (self.subscription_id,
                     resource_group,
                     storage_account)
-
         r = self.connection.request(action,
                                     params={
                                         "api-version": "2015-05-01-preview"},
