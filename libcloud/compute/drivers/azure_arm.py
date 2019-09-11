@@ -684,7 +684,7 @@ class AzureNodeDriver(NodeDriver):
                 disk_name = disk.get('name')
                 disk_size = disk.get('size')
                 disk_type = disk.get('storage_account_type')
-                caching = disk.get('caching', None)
+                caching = disk.get('host_caching', None)
                 new_disk = {"createOption": "Empty", "name": disk_name, "diskSizeGB": disk_size, 'caching': caching, 'lun': lun, 'managedDisk': {'storageAccountType': disk_type}}
                 data_disks.append(new_disk)
 
