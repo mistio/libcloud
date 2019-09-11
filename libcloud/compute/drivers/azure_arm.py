@@ -331,6 +331,7 @@ class AzureNodeDriver(NodeDriver):
         """
 
         images = []
+
         if location is None:
             locations = [self.default_location]
         else:
@@ -575,6 +576,7 @@ class AzureNodeDriver(NodeDriver):
         :return: The newly created node.
         :rtype: :class:`.Node`
         """
+
         if location is None:
             location = self.default_location
         if ex_nic is None:
@@ -1060,7 +1062,7 @@ class AzureNodeDriver(NodeDriver):
                 'diskSizeGB': volume.size,
                 'lun': ex_lun,
                 'createOption': 'empty' if ex_vhd_create else 'attach',
-                'managedDisk': {'id': volume.extra['id']},
+                'vhd': {'uri': ex_vhd_uri},
             }
         else:
             # attach existing managed disk
@@ -2082,6 +2084,7 @@ class AzureNodeDriver(NodeDriver):
                  % (self.subscription_id,
                     resource_group,
                     storage_account)
+
         r = self.connection.request(action,
                                     params={
                                         "api-version": "2015-05-01-preview"},
