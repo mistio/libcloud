@@ -40,7 +40,7 @@ class MaxihostNodeDriver(NodeDriver):
 
         try:
             res = self.connection.request('/devices',
-                                          params=attr, method='POST')
+                                          data=json.dumps(attr), method='POST')
         except BaseHTTPError as exc:
             error_message = exc.message.get('error_messages', '')
             raise ValueError('Failed to create node: %s' % (error_message))
