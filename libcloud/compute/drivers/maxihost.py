@@ -177,7 +177,7 @@ class MaxihostNodeDriver(NodeDriver):
         sizes = []
         data = self._paginated_request('/plans', 'servers')
         for size in data:
-                sizes.append(self._to_size(size))
+            sizes.append(self._to_size(size))
         return sizes
 
     def _to_size(self, data):
@@ -198,7 +198,7 @@ class MaxihostNodeDriver(NodeDriver):
         images = []
         data = self._paginated_request('/plans/operating-systems', 'operating-systems')
         for image in data:
-                images.append(self._to_image(image))
+            images.append(self._to_image(image))
         return images
 
     def _to_image(self, data):
@@ -217,8 +217,11 @@ class MaxihostNodeDriver(NodeDriver):
         :return: Available SSH keys.
         :rtype: ``list`` of :class:`KeyPair`
         """
-        data = self.connection.request('/account/keys')
-        return list(map(self._to_key_pair, data.object['ssh_keys']))
+        keys = []
+        data = self._paginated_request('/account/keys', 'ssh_keys')
+        for key in data:
+            keys.append(key)
+        return list(map(self._to_key_pair, keys))
 
 
     def create_key_pair(self, name, public_key):
