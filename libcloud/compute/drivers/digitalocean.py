@@ -447,7 +447,6 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
 
         :rytpe: ``bool``
         """
-        import ipdb; ipdb.set_trace()
         attr = {'type': 'attach', 'droplet_id': node.id,
                 'volume_name': volume.name, 'region': volume.extra['region_slug']}
 
