@@ -154,7 +154,7 @@ class MaxihostNodeDriver(NodeDriver):
             else:
                 public_ips.append(ip['ip_address'])
 
-        if data['status']:
+        if data['status'] in ['On']:
             state = NodeState.RUNNING
         else:
             state = NodeState.STOPPED
