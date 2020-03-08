@@ -244,7 +244,7 @@ class G8NodeDriver(NodeDriver):
         machineId = self._api_request("/machines/create", params)
         machine = self._api_request("/machines/get",
                                     params={"machineId": machineId})
-        return self._to_node(machine)
+        return self._to_node(machine, ex_network)
 
     def ex_create_network(self, name, private_network="192.168.103.0/24",
                           type="vgw"):
@@ -371,7 +371,7 @@ class G8NodeDriver(NodeDriver):
             nodes_list = self._api_request("/machines/list",
                                            params={"cloudspaceId": network.id})
             for nodedata in nodes_list:
-                nodes.append(self._to_node(nodedata))
+                nodes.append(self._to_node(nodedata, network))
         return nodes
 
     def reboot_node(self, node):
@@ -468,12 +468,12 @@ class G8NodeDriver(NodeDriver):
 
     def _to_volume(self, data):
         # type (dict) -> StorageVolume
-        return StorageVolume(id=data["id"], size=data["sizeMax"],
+        extra = {"type": data["type"], "node_id": data.get("machineId")}
+        return StorageVolume(id=str(data["id"]), size=data["sizeMax"],
                              name=data["name"], driver=self,
-                             extra={"type": data["type"],
-                                    "machineId": data.get('machineId', None)})
+                             extra=extra)
 
-    def _to_node(self, nodedata):
+    def _to_node(self, nodedata, ex_network):
         # type (dict) -> Node
         state = self.NODE_STATE_MAP.get(nodedata["status"], NodeState.UNKNOWN)
         public_ips = []
@@ -486,12 +486,12 @@ class G8NodeDriver(NodeDriver):
                 public_ips.append(nic["ipAddress"].split("/")[0])
             else:
                 private_ips.append(nic["ipAddress"])
-        extra = {}
+        extra = {"network": ex_network}
         for account in nodedata.get("accounts", []):
             extra["password"] = account["password"]
             extra["username"] = account["login"]
 
-        return Node(id=nodedata['id'], name=nodedata['name'],
+        return Node(id=str(nodedata['id']), name=nodedata['name'],
                     driver=self, public_ips=public_ips,
                     private_ips=private_ips, state=state, extra=extra)
 
