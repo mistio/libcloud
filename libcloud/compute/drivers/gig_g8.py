@@ -470,7 +470,8 @@ class G8NodeDriver(NodeDriver):
         # type (dict) -> StorageVolume
         return StorageVolume(id=data["id"], size=data["sizeMax"],
                              name=data["name"], driver=self,
-                             extra={"type": data["type"]})
+                             extra={"type": data["type"],
+                                    "machineId": data.get('machineId', None)})
 
     def _to_node(self, nodedata):
         # type (dict) -> Node
