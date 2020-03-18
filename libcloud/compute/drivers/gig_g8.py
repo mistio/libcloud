@@ -505,7 +505,7 @@ class G8NodeDriver(NodeDriver):
         extra = {"min_disk_size": image["bootDiskSize"],
                  "min_memory": image["memory"],
                  }
-        return NodeImage(str(id=image["id"]), name=image["name"],
+        return NodeImage(id=str(image["id"]), name=image["name"],
                          driver=self, extra=extra)
 
     def _to_size(self, size):
