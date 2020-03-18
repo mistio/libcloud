@@ -497,7 +497,7 @@ class G8NodeDriver(NodeDriver):
 
     def _to_network(self, network):
         # type (dict) -> G8Network
-        return G8Network(network["id"], network["name"], None,
+        return G8Network(str(network["id"]), network["name"], None,
                          network["externalnetworkip"], self)
 
     def _to_image(self, image):
@@ -505,7 +505,7 @@ class G8NodeDriver(NodeDriver):
         extra = {"min_disk_size": image["bootDiskSize"],
                  "min_memory": image["memory"],
                  }
-        return NodeImage(id=image["id"], name=image["name"],
+        return NodeImage(str(id=image["id"]), name=image["name"],
                          driver=self, extra=extra)
 
     def _to_size(self, size):
