@@ -326,7 +326,8 @@ class G8NodeDriver(NodeDriver):
     def ex_destroy_network(self, ex_network):
         # type (G8Network) -> bool
         self._api_request("/cloudspaces/delete",
-                          {"cloudspaceId": int(ex_network.id)})
+                          {"cloudspaceId": int(ex_network.id),
+                           "permanently": True})
         return True
 
     def stop_node(self, node):
@@ -420,6 +421,7 @@ class G8NodeDriver(NodeDriver):
             networks = [ex_network]
         else:
             networks = self.ex_list_networks()
+
         nodes = []
         for network in networks:
             nodes_list = self._api_request("/machines/list",
