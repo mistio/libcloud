@@ -541,6 +541,7 @@ class G8NodeDriver(NodeDriver):
         public_ips = []
         private_ips = []
         nics = nodedata.get("nics", [])
+
         if not nics:
             nics = nodedata.get("interfaces", [])
         for nic in nics:
@@ -548,10 +549,8 @@ class G8NodeDriver(NodeDriver):
                 public_ips.append(nic["ipAddress"].split("/")[0])
             else:
                 private_ips.append(nic["ipAddress"])
+        public_ips.append(ex_network.publicipaddress)
         extra = {"network": ex_network}
-        for account in nodedata.get("accounts", []):
-            extra["password"] = account["password"]
-            extra["username"] = account["login"]
 
         return Node(id=str(nodedata['id']), name=nodedata['name'],
                     driver=self, public_ips=public_ips,
