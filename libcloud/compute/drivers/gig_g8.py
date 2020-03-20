@@ -251,7 +251,7 @@ class G8NodeDriver(NodeDriver):
                                     params={"machineId": machineId})
         node = self._to_node(machine, ex_network)
         if ex_expose_ssh:
-            port = self.ex_expose_ssh_node(node)
+            port = self.ex_expose_ssh_node(node, ex_network)
             node.extra["ssh_port"] = port
             node.extra["ssh_ip"] = ex_network.publicipaddress
         return node
@@ -266,7 +266,7 @@ class G8NodeDriver(NodeDriver):
                 result["node"] = forward.privateport
         return result
 
-    def ex_expose_ssh_node(self, node):
+    def ex_expose_ssh_node(self, node, network):
         """
         Create portforward for ssh purposed
 
@@ -276,7 +276,6 @@ class G8NodeDriver(NodeDriver):
         :rtype: ``int``
         """
 
-        network = node.extra["network"]
         ports = self._find_ssh_ports(network, node)
         if ports["node"]:
             return ports["node"]
