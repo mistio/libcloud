@@ -549,8 +549,11 @@ class G8NodeDriver(NodeDriver):
             else:
                 private_ips.append(nic["ipAddress"])
         public_ips.append(ex_network.publicipaddress)
-        created_at = nodedata["creationTime"]
-        extra = {"network_id": str(ex_network.id), "created_at": created_at}
+        created_at = nodedata.get('creationTime')
+        imageId = str(nodedata.get('imageId'))
+        extra = {"network_id": str(ex_network.id),
+                 "created_at": created_at,
+                 "imageId": imageId}
 
         return Node(id=str(nodedata['id']), name=nodedata['name'],
                     driver=self, public_ips=public_ips,
