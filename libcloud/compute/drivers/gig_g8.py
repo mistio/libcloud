@@ -17,6 +17,8 @@ GiG G8 Driver
 
 """
 import json
+import hashlib
+
 from libcloud.compute.base import NodeImage, NodeSize, Node
 from libcloud.compute.base import NodeDriver, UuidMixin
 from libcloud.compute.base import StorageVolume, NodeAuthSSHKey
@@ -537,6 +539,7 @@ class G8NodeDriver(NodeDriver):
     def _to_node(self, nodedata, ex_network):
         # type (dict) -> Node
         state = self.NODE_STATE_MAP.get(nodedata["status"], NodeState.UNKNOWN)
+        name = nodedata['name']
         public_ips = []
         private_ips = []
         nics = nodedata.get("nics", [])
@@ -548,6 +551,17 @@ class G8NodeDriver(NodeDriver):
                 public_ips.append(nic["ipAddress"].split("/")[0])
             else:
                 private_ips.append(nic["ipAddress"])
+
+        memory = nodedata.get('memory')
+        cpus = nodedata.get('vcpus')
+        size_extra = {'cpus': cpus}
+        disk = nodedata.get('storage')
+        id_to_hash = str(memory) + str(cpus) + str(disk)
+        size_id = hashlib.md5(id_to_hash.encode("utf-8")).hexdigest()
+        size_name = name + "-size"
+        size = NodeSize(id=size_id, name=size_name, ram=memory, disk=disk,
+                        bandwidth=0, price=0, driver=self, extra=size_extra)
+
         public_ips.append(ex_network.publicipaddress)
         created_at = nodedata.get('creationTime')
         imageId = str(nodedata.get('imageId'))
@@ -555,7 +569,7 @@ class G8NodeDriver(NodeDriver):
                  "created_at": created_at,
                  "imageId": imageId}
 
-        return Node(id=str(nodedata['id']), name=nodedata['name'],
+        return Node(id=str(nodedata['id']), name=name, size=size,
                     driver=self, public_ips=public_ips,
                     private_ips=private_ips, state=state, extra=extra)
 
