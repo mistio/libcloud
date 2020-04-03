@@ -242,7 +242,7 @@ class LibvirtNodeDriver(NodeDriver):
         extra = {'uuid': domain.UUIDString(), 'os_type': domain.OSType(),
                  'types': self.connection.getType(),
                  'active': bool(domain.isActive()),
-                 'hypervisor_name': self.connection.getHostname(),
+                 'hypervisor': self.host,
                  'memory': '%s MB' % str(memory / 1024), 'processors': vcpu_count,
                  'used_cpu_time': used_cpu_time, 'xml_description': xml_description}
         node = Node(id=domain.UUIDString(), name=domain.name(), state=state,
