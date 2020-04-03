@@ -179,7 +179,6 @@ class LibvirtNodeDriver(NodeDriver):
             atexit.register(self.disconnect)
 
     def list_nodes(self, show_hypervisor=True):
-
         # active domains
         domain_ids = self.connection.listDomainsID()
         domains = [self.connection.lookupByID(id) for id in domain_ids]
@@ -373,7 +372,7 @@ class LibvirtNodeDriver(NodeDriver):
         if output:
             for image in output.strip().split('\n'):
                 name = image.replace(IMAGES_LOCATION + '/', '')
-                nodeimage = NodeImage(id=image, name=name, driver=self, extra={'host': self.connection.getHostname()})
+                nodeimage = NodeImage(id=image, name=name, driver=self, extra={'host': self.host})
                 images.append(nodeimage)
 
         return images
