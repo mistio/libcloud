@@ -201,24 +201,6 @@ class LibvirtNodeDriver(NodeDriver):
 
         nodes = [self._to_node(domain) for domain in domains]
 
-        # if show_hypervisor:
-        #     public_ips, private_ips = [], []
-        #     # append hypervisor as well
-        #     name = self.connection.getHostname()
-        #     try:
-        #         if is_public_subnet(socket.gethostbyname(self.hypervisor)):
-        #             public_ips.append(self.hypervisor)
-        #         else:
-        #             private_ips.append(self.hypervisor)
-        #     except:
-        #         public_ips.append(self.hypervisor)
-
-        #     extra = {'tags': {'type': 'hypervisor'}}
-        #     node = Node(id=self.hypervisor.replace('.', '-'), name=name, state=NodeState.RUNNING,
-        #                 public_ips=public_ips, private_ips=private_ips,
-        #                 driver=self, extra=extra)
-        #     nodes.append(node)
-
         return nodes
 
     def _to_node(self, domain):
