@@ -24,7 +24,6 @@ import time
 from collections import defaultdict, OrderedDict
 
 import requests
-import demjson  # pylint: disable=import-error
 
 LINUX_PRICING_URLS = [
     # Deprecated instances (JSON format)
@@ -43,15 +42,18 @@ EC2_REGIONS = [
     'us-gov-west-1',
     'eu-west-1',
     'eu-west-2',
+    'eu-west-3',
     'eu-central-1',
     'ca-central-1',
     'ap-southeast-1',
     'ap-southeast-2',
     'ap-northeast-1',
     'ap-northeast-2',
+    'ap-northeast-3',
     'ap-south-1',
     'sa-east-1',
     'cn-north-1',
+    'me-south-1'
 ]
 
 EC2_INSTANCE_TYPES = [
@@ -159,39 +161,23 @@ PRICING_FILE_PATH = os.path.abspath(PRICING_FILE_PATH)
 
 
 def scrape_ec2_pricing():
+    #https://calculator.aws/pricing/1.0/ec2/region/us-east-1/ondemand/windows-std/index.json
     result = defaultdict(OrderedDict)
-
-    for url in LINUX_PRICING_URLS:
-        response = requests.get(url)
-
-        if re.match(r'.*?\.json$', url):
+    os_map = {'linux': 'ec2_linux', 'windows-std': 'ec2_windows'}
+    url = 'https://calculator.aws/pricing/1.0/ec2/region/{}/ondemand/{}/index.json'
+    for OS in ['linux', 'windows-std']:
+        result[os_map[OS]] = {}
+        for region in EC2_REGIONS:
+            result[os_map[OS]][region]={}
+            response = requests.get(url.format(region, OS))
+            if response.status_code != 200:
+                continue
             data = response.json()
-        elif re.match(r'.*?\.js$', url):
-            data = response.content
-            match = re.match(r'^.*callback\((.*?)\);?$', data,
-                             re.MULTILINE | re.DOTALL)
-            data = match.group(1)
-            # demjson supports non-strict mode and can parse unquoted objects
-            data = demjson.decode(data)
-
-        regions = data['config']['regions']
-
-        for region_data in regions:
-            region_name = region_data['region']
-            libcloud_region_name = REGION_NAME_MAP[region_name]
-            instance_types = region_data['instanceTypes']
-
-            for instance_type in instance_types:
-                sizes = instance_type['sizes']
-
-                for size in sizes:
-                    price = size['valueColumns'][0]['prices']['USD']
-                    if str(price).lower() == 'n/a':
-                        # Price not available
-                        continue
-
-                    result[libcloud_region_name][size['size']] = float(price)
-
+            
+            for entry in data['prices']:
+                instance_type = entry['attributes'].get('aws:ec2:instanceType',"")
+                price = entry['price'].get('USD', 0)
+                result[os_map[OS]][region][instance_type] = price
     return result
 
 
@@ -204,7 +190,7 @@ def update_pricing_file(pricing_file_path, pricing_data):
     data['compute'].update(pricing_data)
 
     # Always sort the pricing info
-    data = sort_nested_dict(data)
+    #data = sort_nested_dict(data)
 
     content = json.dumps(data, indent=4)
     lines = content.splitlines()
