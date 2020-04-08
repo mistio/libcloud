@@ -547,6 +547,7 @@ class KubeVirtNodeDriver(NodeDriver):
         nodes = self.list_nodes()
         for node in nodes:
             if node.name == name:
+                self.start_node(node)
                 return node
 
     def list_images(self, location=None):
