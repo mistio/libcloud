@@ -3973,7 +3973,8 @@ class GCENodeDriver(NodeDriver):
             ex_disks_gce_struct=None, ex_nic_gce_struct=None,
             ex_on_host_maintenance=None, ex_automatic_restart=None,
             ex_preemptible=None, ex_image_family=None, ex_labels=None,
-            ex_accelerator_type=None, ex_accelerator_count=None):
+            ex_accelerator_type=None, ex_accelerator_count=None,
+            ex_username=None):
         """
         Create a new node and return a node object for the node.
 
@@ -4181,7 +4182,7 @@ class GCENodeDriver(NodeDriver):
             ex_can_ip_forward, ex_disks_gce_struct, ex_nic_gce_struct,
             ex_on_host_maintenance, ex_automatic_restart, ex_preemptible,
             ex_subnetwork, ex_labels, ex_accelerator_type,
-            ex_accelerator_count)
+            ex_accelerator_count, ex_username)
         self.connection.async_request(request, method='POST', data=node_data)
         return self.ex_get_node(name, location.name)
 
@@ -4340,7 +4341,7 @@ class GCENodeDriver(NodeDriver):
             preemptible=None, tags=None, metadata=None,
             description=None, disks_gce_struct=None, nic_gce_struct=None,
             use_selflinks=True, labels=None, accelerator_type=None,
-            accelerator_count=None, disk_size=None):
+            accelerator_count=None, disk_size=None, username=None):
         """
         Create the GCE instance properties needed for instance templates.
 
@@ -4558,6 +4559,8 @@ class GCENodeDriver(NodeDriver):
             instance_properties['labels'] = labels
         if can_ip_forward:
             instance_properties['canIpForward'] = True
+        if username:
+            instance_properties['extra'] = username
 
         instance_properties['machineType'] = self._get_selflink_or_name(
             obj=node_size, get_selflinks=use_selflinks, objname='size')
@@ -8113,7 +8116,7 @@ class GCENodeDriver(NodeDriver):
             ex_on_host_maintenance=None, ex_automatic_restart=None,
             ex_preemptible=None, ex_subnetwork=None, ex_labels=None,
             ex_accelerator_type=None, ex_accelerator_count=None,
-            ex_disk_size=None):
+            ex_disk_size=None, ex_username=None):
         """
         Returns a request and body to create a new node.
 
@@ -8278,7 +8281,8 @@ class GCENodeDriver(NodeDriver):
             nic_gce_struct=ex_nic_gce_struct,
             accelerator_type=ex_accelerator_type,
             accelerator_count=ex_accelerator_count,
-            use_selflinks=use_selflinks, disk_size=ex_disk_size)
+            use_selflinks=use_selflinks, disk_size=ex_disk_size,
+            username=ex_username)
         node_data['name'] = name
 
         request = '/zones/%s/instances' % (location.name)
