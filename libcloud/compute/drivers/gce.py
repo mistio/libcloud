@@ -4560,7 +4560,8 @@ class GCENodeDriver(NodeDriver):
         if can_ip_forward:
             instance_properties['canIpForward'] = True
         if username:
-            instance_properties['extra'] = username
+            instance_properties['extra'] = {}
+            instance_properties['extra']['username'] = username
 
         instance_properties['machineType'] = self._get_selflink_or_name(
             obj=node_size, get_selflinks=use_selflinks, objname='size')
