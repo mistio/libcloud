@@ -13,7 +13,7 @@ usage_type_map = {
 # compute -> gce_instances --> instance type --> usage type (On demand, preemptible, Commitment) --> region --> price/hour
 compute = {
     'gce_instances': {
-        'N1': {
+        'n1': {
             'cpu':{
                 'description': 'n1 predefined instance core',
                 'on_demand': {},
@@ -29,7 +29,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'N1_custom': {
+        'n1_custom': {
             'cpu':{
                 'description': 'custom instance core',
                 'on_demand': {},
@@ -45,7 +45,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'N1_custom_extended':{
+        'n1_custom_extended':{
             'cpu': {},
             'ram':{
                 'description': 'custom extended instance ram',
@@ -55,7 +55,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'N2': {
+        'n2': {
             'cpu':{
                 'description': 'n2 instance core',
                 'on_demand': {},
@@ -71,7 +71,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'N2_custom': {
+        'n2_custom': {
             'cpu':{
                 'description': 'n2 custom instance core',
                 'on_demand': {},
@@ -87,7 +87,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'N2_custom_extended': {
+        'n2_custom_extended': {
             'cpu': {},
             'ram':{
                 'description': 'n2 custom extended instance ram',
@@ -98,7 +98,7 @@ compute = {
             },
         },
         # E2 predefined and custom have same prices and no extended
-        'E2': {
+        'e2': {
             'cpu':{
                 'description': 'e2 instance core',
                 'on_demand': {},
@@ -114,7 +114,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'E2': {
+        'e2_custom': {
             'cpu':{
                 'description': 'e2 instance core',
                 'on_demand': {},
@@ -130,7 +130,7 @@ compute = {
                 '3yr_commitment': {}
             },
         }, 
-        'N2D': {
+        'n2d': {
             'cpu':{
                 'description': 'n2d amd instance core',
                 'on_demand': {},
@@ -146,7 +146,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'N2D_custom': {
+        'n2d_custom': {
             'cpu':{
                 'description': 'n2d amd custom instance core',
                 'on_demand': {},
@@ -162,7 +162,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'N2D_custom_extended': {
+        'n2d_custom_extended': {
             'cpu': {},
             'ram':{
                 'description': 'n2d amd custom extended instance ram',
@@ -173,7 +173,7 @@ compute = {
             }
         },
         # M1 memory optimized, no custom
-        'M1': {
+        'm1': {
             'cpu':{
                 'description': 'memory-optimized instance core',
                 'on_demand': {},
@@ -189,7 +189,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'C2': {
+        'c2': {
             'cpu':{
                 'description': 'compute optimized core',
                 'on_demand': {},
@@ -205,7 +205,7 @@ compute = {
                 '3yr_commitment': {}
             },
         },
-        'F1_micro': {
+        'f1': {
             'cpu': {  # for consitency, this instance has only one price
                 'description': 'micro instance',
                 'on_demand': {},
@@ -214,7 +214,7 @@ compute = {
                 '3yr_commitment': {}
             }
         },
-        'G1_small': {
+        'g1': {
             'cpu': {  # for consitency, this instance has only one price
                 'description': 'small instance',
                 'on_demand': {},
@@ -233,15 +233,15 @@ compute = {
             'description': 'ssd backed pd',
             'on_demand':{},
         },
-        'Regional_Standard': {
+        'Regional Standard': {
             'description': 'regional storage pd capacity',
             'on_demand':{},
         },
-        'Regional_SSD': {
+        'Regional SSD': {
             'description': 'ssd backed pd capacity',
             'on_demand':{},
         },
-        'Local_SSD':{
+        'Local SSD':{
             'description': 'ssd backed local storage',
             'on_demand': {},
             'preemptible': {},
@@ -274,11 +274,11 @@ compute = {
             }
         },
         'SLES': {
-            'f1-micro': {
+            'f1': {
                 'price': 0.02,
                 'sku': '0469-B817-410A'
             },
-            'g1-small': {
+            'g1': {
                 'price': 0.02,
                 'sku': '739A-8A87-1E79'
             },
@@ -306,11 +306,11 @@ compute = {
                 'price': 0.04, #  this is per core per hour
                 'sku': '00B2-37B0-B8BB'
             },
-            'f1-micro': {
+            'f1': {
                 'price': 0.02,
                 'sku': '151B-229F-68E1'
             },
-            'g1-small': {
+            'g1': {
                 'price': 0.02,
                 'sku': '03F4-45F5-24A2'
             }
@@ -385,7 +385,8 @@ def scrape_sku_price_info(key):
                 location = sku['serviceRegions'][0]
                 usage_type = usage_type_map[sku['category']['usageType']]
                 price = price_from_sku(sku)
-                item[usage_type][location] = {'price': price}
+                # disk price is per month /720 to make it per hour
+                item[usage_type][location] = {'price': price / 720}
                 item[usage_type][location]['sku'] = sku['skuId']
     # images were done by hand
 
@@ -416,7 +417,8 @@ def scrape_only_prices(key):
                 for location in item[usage_type]:
                     if skuId == item[usage_type][location].get('sku'):
                         price = price_from_sku(sku)
-                        item[usage_type][location]['price'] = price
+                        # disk price is per month /720 to make it per hour
+                        item[usage_type][location]['price'] = price /720
 
         for item in dict_['gce_images'].values():
             for type_ in item:
@@ -429,14 +431,16 @@ def scrape_only_prices(key):
 
 
 def price_from_sku(sku):
-    units = sku['pricingInfo'][0]['pricingExpression'][
-        'tieredRates'][0]['unitPrice']['units']
-    nanos = sku['pricingInfo'][0]['pricingExpression'][
-        'tieredRates'][0]['unitPrice']['nanos']
-    nano = str(nanos)
-    nano = "0"*(9-len(nano)) + nano
-    units = str(units)
-    price = units + "." + nano
+    for tiered_rate in sku['pricingInfo'][0]['pricingExpression'][
+        'tieredRates']:
+        units = tiered_rate['unitPrice']['units']
+        nanos = tiered_rate['unitPrice']['nanos']
+        nano = str(nanos)
+        nano = "0"*(9-len(nano)) + nano
+        units = str(units)
+        price = units + "." + nano
+        if float(price) != 0:
+            break
     return float(price)
 
 def update_pricing_file(pricing_file_path, pricing_data):
