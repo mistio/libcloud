@@ -43,6 +43,8 @@ from libcloud.compute.base import KeyPair
 from libcloud.compute.types import NodeState, KeyPairDoesNotExistError, \
     StorageVolumeState, VolumeSnapshotState
 from libcloud.compute.constants import INSTANCE_TYPES, REGION_DETAILS
+from libcloud.pricing import get_size_price
+
 
 __all__ = [
     'API_VERSION',
@@ -1690,8 +1692,14 @@ class BaseEC2NodeDriver(NodeDriver):
             attributes = INSTANCE_TYPES[instance_type]
             attributes = copy.deepcopy(attributes)
             try:
-                price = self._get_size_price(size_id=instance_type)
-                attributes['price'] = price
+                price = get_size_price(driver_type='compute',
+                                       driver_name='ec2_linux',
+                                       size_id=instance_type)
+                if price is None:
+                    # it is a weird bare metal instance
+                    attributes['price'] = None
+                else:
+                    attributes['price'] = price[self.region_name]
             except KeyError:
                 attributes['price'] = None  # pricing not available
             sizes.append(NodeSize(driver=self, **attributes))
@@ -1939,7 +1947,8 @@ class BaseEC2NodeDriver(NodeDriver):
 
         if 'auth' in kwargs:
             auth = self._get_and_check_auth(kwargs['auth'])
-            key = self.ex_find_or_import_keypair_by_key_material(auth.pubkey, kwargs.get('ex_keyname'))
+            key = self.ex_find_or_import_keypair_by_key_material(
+                auth.pubkey, kwargs.get('ex_keyname'))
             params['KeyName'] = key['keyName']
 
         if 'ex_keyname' in kwargs:
@@ -2879,7 +2888,7 @@ class BaseEC2NodeDriver(NodeDriver):
             name = findtext(element=group, xpath='groupName',
                             namespace=NAMESPACE)
             id = findtext(element=group, xpath='groupId',
-                            namespace=NAMESPACE)
+                          namespace=NAMESPACE)
             group = {'name': name, 'id': id}
             groups.append(group)
 
@@ -6150,7 +6159,13 @@ class OutscaleNodeDriver(BaseEC2NodeDriver):
         for instance_type in available_types:
             attributes = OUTSCALE_INSTANCE_TYPES[instance_type]
             attributes = copy.deepcopy(attributes)
-            price = self._get_size_price(size_id=instance_type)
+            price = get_size_price(driver_type='compute',
+                                   driver_name='ec2_linux',
+                                   size_id=instance_type)
+            if price is None:
+                attributes['price'] = None
+            else:
+                attributes['price'] = price[self.region_name]
             attributes.update({'price': price})
             sizes.append(NodeSize(driver=self, **attributes))
         return sizes
