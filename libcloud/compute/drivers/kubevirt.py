@@ -1157,3 +1157,43 @@ class KubeVirtNodeDriver(NodeDriver):
                     driver=driver, size=size,
                     image=image, extra=extra,
                     created_at=created_at)
+    
+    def ex_list_services(self, namespace='default'):
+        '''
+        While this could be a kubernetes method, in this case
+        it will search for the services that concern kubevirt vms
+        '''
+        label_selector = {'service': 'kubevirt.io'}
+        request = ROOT_URL + '/namespaces/{}/services'.format(namespace)
+        result = self.connection.request(req).object
+
+    def ex_create_service(self, node, port, target_port, protocol='TCP', service_type="NodePort"):
+        '''
+        param service_type: Valid types are ClusterIp, NodePort, LoadBalancer
+        type  service_type: `str`
+        '''
+        # check if service exists first
+        servcice_name = 'service-{}'.format(node.name)
+        service = {
+            'kind': 'Service',
+            'apiVersion': 'v1',
+            'metadata': {
+                'name': service_name,
+                'labels':[
+                    {'service': 'kubevirt.io'}
+                ]
+            },
+            'spec':{
+                'type': "",
+                'selector': {
+                    "kubevirt.io/vm": node.name                    
+                },
+                'ports':[]
+            },
+            
+        }
+        port = {
+            'protocol': protocol,
+            'port': port,
+            'targetPort': target_port
+        }
