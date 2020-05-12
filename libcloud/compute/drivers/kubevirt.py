@@ -1158,42 +1158,118 @@ class KubeVirtNodeDriver(NodeDriver):
                     image=image, extra=extra,
                     created_at=created_at)
     
-    def ex_list_services(self, namespace='default'):
+    def ex_list_services(self, namespace='default', service_name=None):
         '''
-        While this could be a kubernetes method, in this case
-        it will search for the services that concern kubevirt vms
-        '''
-        label_selector = {'service': 'kubevirt.io'}
-        request = ROOT_URL + '/namespaces/{}/services'.format(namespace)
-        result = self.connection.request(req).object
 
-    def ex_create_service(self, node, port, target_port, protocol='TCP', service_type="NodePort"):
         '''
-        param service_type: Valid types are ClusterIp, NodePort, LoadBalancer
+        params = None
+        if service_name is not None:
+            params = {'fieldSelector': 'metadata.name={}'.format(service_name)}
+        req = ROOT_URL + '/namespaces/{}/services'.format(namespace)
+        result = self.connection.request(req, params=params).object
+        return result['items']
+
+    def ex_create_service(self, node, ports, target_ports=None,
+                          protocol='TCP', service_type="NodePort",
+                          cluster_ip=None, override_ports=False):
+        '''
+        If ports is 0 or None or empty list then the service will be deleted.
+        Each node has a single service of one type on which the exposed ports
+        are described. If a service exists then the port declared will be
+        exposed alongside the existing ones, set override_ports=True to delete
+        existing exposed ports and expose just the ones in the port variable.
+
+        param node: the libcloud node for which the ports will be exposed
+        type  node: libcloud `Node` class
+
+        param ports: a list with all the ports that should be exposed on the
+                     service
+        type  ports: `list`
+
+        param target_ports: The corresponding ports on the nodet to the ports
+                            on the service. ports[0] will correspond to
+                            target_ports[0], if an elemenent with index i is
+                            0, "", or None or any falsey value then its value
+                            will be set the same as ports[i]
+        type  target_ports: `list`
+
+        param protocol: Valid values are TCP or UDP. Due to this param this
+                        method can open ports only for one protocol each time
+                        it is run. So if you want to expose multiple ports for
+                        both protocols then the method should be called twice
+                        once for each protocol.
+        type  protocol: `str`
+
+        param service_type: Valid types are ClusterIP, NodePort, LoadBalancer
         type  service_type: `str`
+
+        param cluster_ip: This can be set with an IP string value if you want
+                          manually set the service's internal IP. If the value
+                          is not correct the method will fail, this value can't
+                          be updated.
+        type  cluster_ip: `str`
+
+        param override_ports: Set to True if you want to delete the existing
+                              ports exposed by the service and keep just the
+                              ones declared in the present ports argument.
+                              By default it is false and if the service
+                              already exists the ports will be added to the
+                              existing ones.
+        type  override_ports: `boolean`
         '''
         # check if service exists first
-        servcice_name = 'service-{}'.format(node.name)
-        service = {
-            'kind': 'Service',
-            'apiVersion': 'v1',
-            'metadata': {
-                'name': service_name,
-                'labels':[
-                    {'service': 'kubevirt.io'}
-                ]
-            },
-            'spec':{
-                'type': "",
-                'selector': {
-                    "kubevirt.io/vm": node.name                    
+        namespace = node.extra.get('namespace', 'default')
+        service_name = 'service-{}-{}'.format(service_type, node.name)
+        service_list = self.ex_list_services(namespace=namespace,
+                                        service_name=service_name)
+        ports_to_expose = []
+        for i in range(len(ports)):
+            if not target_ports[i]:
+                target_ports[i] = ports[i]
+
+            ports_to_expose.append({
+                    'protocol': protocol,
+                    'port': port[i],
+                    'targetPort': target_port[i]
+                })
+        if len(service_list) > 0:
+            method = 'PATCH'
+            spec = {'ports': ports_to_expose}
+            if override_ports:
+                existing_ports = service_list[0]['spec']['ports']
+                spec = {'ports': existing_ports.extend(ports_to_expose)}
+            data = json.dumps({'spec': spec})
+            headers = {"Content-Type": "application/merge-patch+json"}
+            req = "{}/namespaces/{}/services/{}".format(
+                ROOT_URL, namespace, service_name
+            )
+        else:
+            method = 'POST'
+            service = {
+                'kind': 'Service',
+                'apiVersion': 'v1',
+                'metadata': {
+                    'name': service_name,
+                    'labels': {
+                        'service': 'kubevirt.io'
+                    }
                 },
-                'ports':[]
-            },
-            
-        }
-        port = {
-            'protocol': protocol,
-            'port': port,
-            'targetPort': target_port
-        }
+                'spec':{
+                    'type': "",
+                    'selector': {
+                        "kubevirt.io/vm": node.name
+                    },
+                    'ports': []
+                },
+            }
+            service['spec']['ports'] = ports_to_expose
+            if cluster_ip is not None:
+                service['spec']['clusterIP'] = cluster_ip
+            data = json.dumps(service)
+            headers = None
+            req = "{}/namespaces/{}/services".format(ROOT_URL, namespace)
+        try:
+            self.connection.request(req, method=method, data=data,
+                                    headers=headers)
+        except Exception as exc:
+            raise
