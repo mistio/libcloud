@@ -297,7 +297,8 @@ class KubeVirtNodeDriver(NodeDriver):
 
     # only has container disk support atm with no persistency
     def create_node(self, name, image, location=None, ex_memory=128, ex_cpu=1,
-                    ex_disks=None, ex_network=None, ex_termination_grace_period=0):
+                    ex_disks=None, ex_network=None, ex_termination_grace_period=0,
+                    ports={}):
         """
         Creating a VM with a containerDisk.
         :param name: A name to give the VM. The VM will be identified by
@@ -374,6 +375,15 @@ class KubeVirtNodeDriver(NodeDriver):
                       network_type: `str` | only "pod" is accepted atm
                       interface: `str` | "masquerade" or "bridge"
                       name: `str`
+
+        :param ports: A dictionary with keys: 'ports_tcp' and 'ports_udp'
+                      'ports_tcp' value is a list of ints that indicate
+                      the ports to be exposed with TCP protocol,
+                      and 'ports_udp' is a list of ints that indicate
+                      the ports to be exposed with UDP protocol.
+        :type  ports: `dict` with keys
+                      'ports_tcp`: `list` of `int`
+                      'ports_udp`: `list` of `int`
         """
         # all valid disk types for which support will be added in the future
         DISK_TYPES = {'containerDisk', 'ephemeral', 'configMap', 'dataVolume',
@@ -529,10 +539,32 @@ class KubeVirtNodeDriver(NodeDriver):
             network_type = "pod"
         network_dict = {network_type: {}, 'name': network_name}
         interface_dict = {interface: {}, 'name': network_name}
+        if ports.get('ports_tcp'):
+            ports_to_expose = []
+            for port in ports['ports_tcp']:
+                ports_to_expose.append(
+                    {
+                        'port': port,
+                        'protocol': 'TCP'
+                    }
+                )
+            interface_dict[interface]['ports'] = ports_to_expose
+        if ports.get('ports_udp'):
+            ports_to_expose = interface_dict[interface].get('ports', [])
+            for port in ports.get('ports_udp'):
+                ports_to_expose.append(
+                    {
+                        'port': port,
+                        'protocol': 'UDP'
+                    }
+                )
+            interface_dict[interface]['ports'] = ports_to_expose
         vm['spec']['template']['spec'][
             'networks'].append(network_dict)
         vm['spec']['template']['spec']['domain']['devices'][
             'interfaces'].append(interface_dict)
+        
+
 
         method = "POST"
         data = json.dumps(vm)
@@ -1169,7 +1201,7 @@ class KubeVirtNodeDriver(NodeDriver):
         result = self.connection.request(req, params=params).object
         return result['items']
 
-    def ex_create_service(self, node, ports, target_ports=None,
+    def ex_create_service(self, node, ports, target_ports=[],
                           protocol='TCP', service_type="NodePort",
                           cluster_ip=None, override_ports=False):
         '''
@@ -1222,6 +1254,9 @@ class KubeVirtNodeDriver(NodeDriver):
         service_name = 'service-{}-{}'.format(service_type, node.name)
         service_list = self.ex_list_services(namespace=namespace,
                                         service_name=service_name)
+        if len(target_ports) < len(ports):
+            to_extend = [0] * (len(ports) - len(target_ports))
+            target.ports.extend(to_extend)
         ports_to_expose = []
         for i in range(len(ports)):
             if not target_ports[i]:
@@ -1232,14 +1267,19 @@ class KubeVirtNodeDriver(NodeDriver):
                     'port': port[i],
                     'targetPort': target_port[i]
                 })
+        headers = None
+        data = None
         if len(service_list) > 0:
-            method = 'PATCH'
-            spec = {'ports': ports_to_expose}
-            if override_ports:
-                existing_ports = service_list[0]['spec']['ports']
-                spec = {'ports': existing_ports.extend(ports_to_expose)}
-            data = json.dumps({'spec': spec})
-            headers = {"Content-Type": "application/merge-patch+json"}
+            if not ports:
+                method = 'DELETE'
+            else:
+                method = 'PATCH'
+                spec = {'ports': ports_to_expose}
+                if override_ports:
+                    existing_ports = service_list[0]['spec']['ports']
+                    spec = {'ports': existing_ports.extend(ports_to_expose)}
+                data = json.dumps({'spec': spec})
+                headers = {"Content-Type": "application/merge-patch+json"}
             req = "{}/namespaces/{}/services/{}".format(
                 ROOT_URL, namespace, service_name
             )
@@ -1266,7 +1306,6 @@ class KubeVirtNodeDriver(NodeDriver):
             if cluster_ip is not None:
                 service['spec']['clusterIP'] = cluster_ip
             data = json.dumps(service)
-            headers = None
             req = "{}/namespaces/{}/services".format(ROOT_URL, namespace)
         try:
             self.connection.request(req, method=method, data=data,
