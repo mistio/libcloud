@@ -8986,7 +8986,7 @@ class GCENodeDriver(NodeDriver):
         extra['guestCpus'] = machine_type.get('guestCpus')
         extra['creationTimestamp'] = machine_type.get('creationTimestamp')
         try:
-            size_name = machine_type['name'][:2]
+            size_name = machine_type['name'].split('-')[0]
             location = extra['zone'].name
             location = '-'.join(location.split('-')[:2])
             machine_ram = float(machine_type.get('memoryMb', 0)) / 1024
