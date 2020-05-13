@@ -489,7 +489,7 @@ class VSphereNodeDriver(NodeDriver):
         path = vm.get('summary.config.vmPathName')
         memory = vm.get('summary.config.memorySizeMB')
         cpus = vm.get('summary.config.numCpu')
-        disk = vm.get('summary.storage.committed', 0) / (1024 ** 3)
+        disk = vm.get('summary.storage.committed', 0) // (1024 ** 3)
         id_to_hash = str(memory) + str(cpus) + str(disk)
         size_id = hashlib.md5(id_to_hash.encode("utf-8")).hexdigest()
         size_name = name + "-size"
@@ -504,7 +504,9 @@ class VSphereNodeDriver(NodeDriver):
         if 'Microsoft' in str(operating_system):
             os_type = 'windows'
         uuid = vm.get('summary.config.instanceUuid') or \
-            vm.get('obj').config.instanceUuid
+            (vm.get('obj').config and vm.get('obj').config.instanceUuid)
+        if not uuid:                                                
+            logger.error('No uuid for vm:', vm)
         annotation = vm.get('summary.config.annotation')
         state = vm.get('summary.runtime.powerState')
         status = self.NODE_STATE_MAP.get(state, NodeState.UNKNOWN)
