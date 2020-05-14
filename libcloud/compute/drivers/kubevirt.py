@@ -1201,36 +1201,32 @@ class KubeVirtNodeDriver(NodeDriver):
         result = self.connection.request(req, params=params).object
         return result['items']
 
-    def ex_create_service(self, node, ports, target_ports=[],
-                          protocol='TCP', service_type="NodePort",
-                          cluster_ip=None, override_ports=False):
+    def ex_create_service(self, node, ports, service_type="NodePort",
+                          cluster_ip=None, override_existing_ports=False):
         '''
-        If ports is 0 or None or empty list then the service will be deleted.
         Each node has a single service of one type on which the exposed ports
         are described. If a service exists then the port declared will be
-        exposed alongside the existing ones, set override_ports=True to delete
-        existing exposed ports and expose just the ones in the port variable.
+        exposed alongside the existing ones, set override_existing_ports=True
+        to delete existing exposed ports and expose just the ones in the port
+        variable.
 
         param node: the libcloud node for which the ports will be exposed
         type  node: libcloud `Node` class
 
-        param ports: a list with all the ports that should be exposed on the
-                     service
-        type  ports: `list`
-
-        param target_ports: The corresponding ports on the nodet to the ports
-                            on the service. ports[0] will correspond to
-                            target_ports[0], if an elemenent with index i is
-                            0, "", or None or any falsey value then its value
-                            will be set the same as ports[i]
-        type  target_ports: `list`
-
-        param protocol: Valid values are TCP or UDP. Due to this param this
-                        method can open ports only for one protocol each time
-                        it is run. So if you want to expose multiple ports for
-                        both protocols then the method should be called twice
-                        once for each protocol.
-        type  protocol: `str`
+        param ports: a list of dictionaries with keys --> values:
+                     'port' --> port to be exposed on the service
+                     'target_port' --> port on the pod/node, optional
+                                       if empty then it gets the same
+                                       value as 'port' value 
+                     'protocol' ---> either 'UDP' or 'TCP', defaults to TCP
+                     'name' --> A name for the service
+                     If ports is an empty `list` and a service exists of this
+                     type then the service will be deleted.
+        type  ports: `list` of `dict` where each `dict` has keys --> values:
+                     'port' --> `int`
+                     'target_port' --> `int`
+                     'protocol' --> `str
+                     'name' --> str
 
         param service_type: Valid types are ClusterIP, NodePort, LoadBalancer
         type  service_type: `str`
@@ -1241,31 +1237,35 @@ class KubeVirtNodeDriver(NodeDriver):
                           be updated.
         type  cluster_ip: `str`
 
-        param override_ports: Set to True if you want to delete the existing
-                              ports exposed by the service and keep just the
-                              ones declared in the present ports argument.
-                              By default it is false and if the service
-                              already exists the ports will be added to the
-                              existing ones.
-        type  override_ports: `boolean`
+        param override_existing_ports: Set to True if you want to delete the
+                                       existing ports exposed by the service
+                                       and keep just the ones declared in the
+                                       present ports argument.
+                                       By default it is false and if the
+                                       service already exists the ports will be
+                                       added to the existing ones.
+        type  override_existing_ports: `boolean`
         '''
         # check if service exists first
         namespace = node.extra.get('namespace', 'default')
         service_name = 'service-{}-{}'.format(service_type, node.name)
         service_list = self.ex_list_services(namespace=namespace,
                                         service_name=service_name)
-        if len(target_ports) < len(ports):
-            to_extend = [0] * (len(ports) - len(target_ports))
-            target.ports.extend(to_extend)
-        ports_to_expose = []
-        for i in range(len(ports)):
-            if not target_ports[i]:
-                target_ports[i] = ports[i]
 
+        ports_to_expose = []
+        # if ports has a falsey value like None or 0
+        if not ports: 
+            ports = []
+        for port_group in ports:
+            if not port_group.get('target_port', None):
+                port_group['target_port'] = port_group['port']
+            if not port_group.get('name', ""):
+                port_group['name'] = 'port-{}'.format(port_group['port'])
             ports_to_expose.append({
-                    'protocol': protocol,
-                    'port': port[i],
-                    'targetPort': target_port[i]
+                    'protocol': port_group.get('protocol', 'TCP'),
+                    'port': int(port_group['port'])
+                    'targetPort': int(port_group['target_port'])
+                    'name': port_group['name']
                 })
         headers = None
         data = None
@@ -1275,7 +1275,7 @@ class KubeVirtNodeDriver(NodeDriver):
             else:
                 method = 'PATCH'
                 spec = {'ports': ports_to_expose}
-                if override_ports:
+                if not override_existing_ports:
                     existing_ports = service_list[0]['spec']['ports']
                     spec = {'ports': existing_ports.extend(ports_to_expose)}
                 data = json.dumps({'spec': spec})
@@ -1284,6 +1284,11 @@ class KubeVirtNodeDriver(NodeDriver):
                 ROOT_URL, namespace, service_name
             )
         else:
+            if not ports:
+                raise ValueError("Argument ports is empty but there is no "
+                                 "service of {} type to be deleted".format(
+                                     service_type
+                                 ))
             method = 'POST'
             service = {
                 'kind': 'Service',
