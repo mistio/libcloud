@@ -1202,7 +1202,8 @@ class KubeVirtNodeDriver(NodeDriver):
         return result['items']
 
     def ex_create_service(self, node, ports, service_type="NodePort",
-                          cluster_ip=None, override_existing_ports=False):
+                          cluster_ip=None, load_balancer_ip=None,
+                          override_existing_ports=False):
         '''
         Each node has a single service of one type on which the exposed ports
         are described. If a service exists then the port declared will be
@@ -1263,8 +1264,8 @@ class KubeVirtNodeDriver(NodeDriver):
                 port_group['name'] = 'port-{}'.format(port_group['port'])
             ports_to_expose.append({
                     'protocol': port_group.get('protocol', 'TCP'),
-                    'port': int(port_group['port'])
-                    'targetPort': int(port_group['target_port'])
+                    'port': int(port_group['port']),
+                    'targetPort': int(port_group['target_port']),
                     'name': port_group['name']
                 })
         headers = None
@@ -1310,10 +1311,13 @@ class KubeVirtNodeDriver(NodeDriver):
             service['spec']['ports'] = ports_to_expose
             if cluster_ip is not None:
                 service['spec']['clusterIP'] = cluster_ip
+            if service_type == "LoadBalancer" and load_balancer_ip is not None:
+                service['spec']['loadBalancerIP'] = load_balancer_ip
             data = json.dumps(service)
             req = "{}/namespaces/{}/services".format(ROOT_URL, namespace)
         try:
-            self.connection.request(req, method=method, data=data,
-                                    headers=headers)
+            result = self.connection.request(req, method=method, data=data,
+                                             headers=headers)
         except Exception as exc:
             raise
+        return result.status in VALID_RESPONSE_CODES
