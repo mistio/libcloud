@@ -1068,8 +1068,6 @@ class KubeVirtNodeDriver(NodeDriver):
 
     def _to_node(self, vm, is_stopped=False):
         """
-        This will conver a VM resource to a node with state "Stopped"
-        It can be started with self.start
         """
         ID = vm['metadata']['uid']
         name = vm['metadata']['name']
@@ -1139,6 +1137,26 @@ class KubeVirtNodeDriver(NodeDriver):
                 if 'persistentVolumeClaim' in volume:
                     extra['pvcs'].append(volume[
                         'persistentVolumeClaim']['claimName'])
+        port_forwards = []
+        services = self.ex_list_services(namespace=extra['namespace'],
+                                         node_name=name)
+        for service in services:
+            service_type = service['spec'].get('type')
+            for port_pair in service['spec']['ports']:
+                protocol = port_pair.get('protocol')
+                public_port = port_pair.get('port')
+                local_port = port_pair.get('targetPort')
+                try:
+                    int(local_port)
+                except ValueError:
+                    local_port = public_port
+            port_forwards.append({
+                'local_port': local_port,
+                'public_port': public_port,
+                'protocol': protocol,
+                'service_type': service_type
+            })
+        extra['port_forwards'] = port_forwards
         if is_stopped:
             state = NodeState.STOPPED
             public_ips = None
@@ -1190,16 +1208,23 @@ class KubeVirtNodeDriver(NodeDriver):
                     image=image, extra=extra,
                     created_at=created_at)
     
-    def ex_list_services(self, namespace='default', service_name=None):
+    def ex_list_services(self, namespace='default', node_name=None, service_name=None):
         '''
-
+        If node_name is given then the services returned will be those that
+        concern the node
         '''
         params = None
         if service_name is not None:
             params = {'fieldSelector': 'metadata.name={}'.format(service_name)}
         req = ROOT_URL + '/namespaces/{}/services'.format(namespace)
-        result = self.connection.request(req, params=params).object
-        return result['items']
+        result = self.connection.request(req, params=params).object['items']
+        if node_name:
+            res = []
+            for service in result:
+                if node_name in service['metadata'].get('name', ""):
+                    res.append(service)
+            return res
+        return result
 
     def ex_create_service(self, node, ports, service_type="NodePort",
                           cluster_ip=None, load_balancer_ip=None,
@@ -1249,9 +1274,9 @@ class KubeVirtNodeDriver(NodeDriver):
         '''
         # check if service exists first
         namespace = node.extra.get('namespace', 'default')
-        service_name = 'service-{}-{}'.format(service_type, node.name)
+        service_name = 'service-{}-{}'.format(service_type.lower(), node.name)
         service_list = self.ex_list_services(namespace=namespace,
-                                        service_name=service_name)
+                                             service_name=service_name)
 
         ports_to_expose = []
         # if ports has a falsey value like None or 0
