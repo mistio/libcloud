@@ -232,7 +232,7 @@ class VSphereNodeDriver(NodeDriver):
         """
         return []
 
-    def list_images(self, location=None, folder=None):
+    def list_images(self, location=None, folder_ids=[]):
         """
         Lists VM templates as images.
         If folder is given then it will list images contained
@@ -240,9 +240,11 @@ class VSphereNodeDriver(NodeDriver):
         """
 
         images = []
-        if folder:
-            folder_object = self._get_item_by_moid('Folder', folder['id'])
-            vms = folder_object.childEntity
+        if folder_ids:
+            vms = []
+            for folder_id in folder_ids:
+                folder_object = self._get_item_by_moid('Folder', folder_id)
+                vms.extend(folder_object.childEntity)
         else:
             content = self.connection.RetrieveContent()
             vms = content.viewManager.CreateContainerView(
