@@ -1652,7 +1652,7 @@ class VSphere_6_7_NodeDriver(NodeDriver):
             raise
         return result
 
-    def list_images(self, folder=None):
+    def list_images(self, **kwargs):
         libraries = self.ex_list_content_libraries()
         item_ids = []
         if libraries:
