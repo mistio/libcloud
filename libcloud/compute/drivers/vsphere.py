@@ -232,21 +232,29 @@ class VSphereNodeDriver(NodeDriver):
         """
         return []
 
-    def list_images(self, location=None):
+    def list_images(self, location=None, folder_ids=[]):
         """
-        Lists VM templates as images
+        Lists VM templates as images.
+        If folder is given then it will list images contained
+        in that folder only.
         """
 
         images = []
-        content = self.connection.RetrieveContent()
-        vms = content.viewManager.CreateContainerView(
-            content.rootFolder,
-            [vim.VirtualMachine],
-            recursive=True
-        ).view
+        if folder_ids:
+            vms = []
+            for folder_id in folder_ids:
+                folder_object = self._get_item_by_moid('Folder', folder_id)
+                vms.extend(folder_object.childEntity)
+        else:
+            content = self.connection.RetrieveContent()
+            vms = content.viewManager.CreateContainerView(
+                content.rootFolder,
+                [vim.VirtualMachine],
+                recursive=True
+            ).view
 
         for vm in vms:
-            if vm.config.template:
+            if vm.config and vm.config.template:
                 images.append(self._to_image(vm))
 
         return images
@@ -489,7 +497,7 @@ class VSphereNodeDriver(NodeDriver):
         path = vm.get('summary.config.vmPathName')
         memory = vm.get('summary.config.memorySizeMB')
         cpus = vm.get('summary.config.numCpu')
-        disk = vm.get('summary.storage.committed', 0) / (1024 ** 3)
+        disk = vm.get('summary.storage.committed', 0) // (1024 ** 3)
         id_to_hash = str(memory) + str(cpus) + str(disk)
         size_id = hashlib.md5(id_to_hash.encode("utf-8")).hexdigest()
         size_name = name + "-size"
@@ -504,7 +512,9 @@ class VSphereNodeDriver(NodeDriver):
         if 'Microsoft' in str(operating_system):
             os_type = 'windows'
         uuid = vm.get('summary.config.instanceUuid') or \
-            vm.get('obj').config.instanceUuid
+            (vm.get('obj').config and vm.get('obj').config.instanceUuid)
+        if not uuid:
+            logger.error('No uuid for vm:', vm)
         annotation = vm.get('summary.config.annotation')
         state = vm.get('summary.runtime.powerState')
         status = self.NODE_STATE_MAP.get(state, NodeState.UNKNOWN)
@@ -1642,7 +1652,7 @@ class VSphere_6_7_NodeDriver(NodeDriver):
             raise
         return result
 
-    def list_images(self):
+    def list_images(self, **kwargs):
         libraries = self.ex_list_content_libraries()
         item_ids = []
         if libraries:
