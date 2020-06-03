@@ -284,7 +284,13 @@ class KubeVirtNodeDriver(NodeDriver):
         """
         namespace = node.extra['namespace']
         name = node.name
-        # stop the vmi first
+        # find and delete services for this VM only
+        services = self.ex_list_services(namespace=namespace, node_name=name)
+        for service in services:
+            service_type = service['spec']['type']
+            self.ex_create_service(node=node, ports=[], 
+                                   service_type=service_type)
+        # stop the vmi
         self.stop_node(node)
         try:
             result = self.connection.request(KUBEVIRT_URL + 'namespaces/' +
@@ -563,8 +569,6 @@ class KubeVirtNodeDriver(NodeDriver):
             'networks'].append(network_dict)
         vm['spec']['template']['spec']['domain']['devices'][
             'interfaces'].append(interface_dict)
-        
-
 
         method = "POST"
         data = json.dumps(vm)
@@ -1081,8 +1085,8 @@ class KubeVirtNodeDriver(NodeDriver):
                     'domain']['resources']['limits']:
                 memory = vm['spec']['template']['spec'][
                     'domain']['resources']['limits']['memory']
-        elif vm['spec']['template']['spec']['domain']['resources'].get(
-             'requests', None):
+        elif vm['spec']['template']['spec']['domain'][
+             'resources'].get('requests', None):
             if vm['spec']['template']['spec'][
                'domain']['resources']['requests'].get('memory', None):
                 memory = vm['spec']['template']['spec'][
@@ -1150,12 +1154,12 @@ class KubeVirtNodeDriver(NodeDriver):
                     int(local_port)
                 except ValueError:
                     local_port = public_port
-            port_forwards.append({
-                'local_port': local_port,
-                'public_port': public_port,
-                'protocol': protocol,
-                'service_type': service_type
-            })
+                port_forwards.append({
+                    'local_port': local_port,
+                    'public_port': public_port,
+                    'protocol': protocol,
+                    'service_type': service_type
+                })
         extra['port_forwards'] = port_forwards
         if is_stopped:
             state = NodeState.STOPPED
@@ -1207,8 +1211,9 @@ class KubeVirtNodeDriver(NodeDriver):
                     driver=driver, size=size,
                     image=image, extra=extra,
                     created_at=created_at)
-    
-    def ex_list_services(self, namespace='default', node_name=None, service_name=None):
+
+    def ex_list_services(self, namespace='default', node_name=None,
+                         service_name=None):
         '''
         If node_name is given then the services returned will be those that
         concern the node
@@ -1243,7 +1248,7 @@ class KubeVirtNodeDriver(NodeDriver):
                      'port' --> port to be exposed on the service
                      'target_port' --> port on the pod/node, optional
                                        if empty then it gets the same
-                                       value as 'port' value 
+                                       value as 'port' value
                      'protocol' ---> either 'UDP' or 'TCP', defaults to TCP
                      'name' --> A name for the service
                      If ports is an empty `list` and a service exists of this
@@ -1280,19 +1285,18 @@ class KubeVirtNodeDriver(NodeDriver):
 
         ports_to_expose = []
         # if ports has a falsey value like None or 0
-        if not ports: 
+        if not ports:
             ports = []
         for port_group in ports:
             if not port_group.get('target_port', None):
                 port_group['target_port'] = port_group['port']
             if not port_group.get('name', ""):
                 port_group['name'] = 'port-{}'.format(port_group['port'])
-            ports_to_expose.append({
-                    'protocol': port_group.get('protocol', 'TCP'),
-                    'port': int(port_group['port']),
-                    'targetPort': int(port_group['target_port']),
-                    'name': port_group['name']
-                })
+            ports_to_expose.append(
+                {'protocol': port_group.get('protocol', 'TCP'),
+                 'port': int(port_group['port']),
+                 'targetPort': int(port_group['target_port']),
+                 'name': port_group['name']})
         headers = None
         data = None
         if len(service_list) > 0:
@@ -1325,7 +1329,7 @@ class KubeVirtNodeDriver(NodeDriver):
                         'service': 'kubevirt.io'
                     }
                 },
-                'spec':{
+                'spec': {
                     'type': "",
                     'selector': {
                         "kubevirt.io/vm": node.name
@@ -1334,6 +1338,7 @@ class KubeVirtNodeDriver(NodeDriver):
                 },
             }
             service['spec']['ports'] = ports_to_expose
+            service['spec']['type'] = service_type
             if cluster_ip is not None:
                 service['spec']['clusterIP'] = cluster_ip
             if service_type == "LoadBalancer" and load_balancer_ip is not None:
