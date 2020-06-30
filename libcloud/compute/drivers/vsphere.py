@@ -676,9 +676,12 @@ class VSphereNodeDriver(NodeDriver):
 
     def reboot_node(self, node):
         """
+        This will reboot the guest OS, the SOAP method does not return anything
+        thus this method will not return something either.
         """
         vm = self.find_by_uuid(node.id)
-        return self.wait_for_task(vm.RebootGuest())
+        vm.RebootGuest()
+
 
     def destroy_node(self, node):
         """
