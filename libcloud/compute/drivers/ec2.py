@@ -2093,9 +2093,6 @@ class BaseEC2NodeDriver(NodeDriver):
                                volume.  (optional)
         :type snapshot:  :class:`.VolumeSnapshot`
 
-        :param location: Datacenter in which to create a volume in.
-        :type location: :class:`.ExEC2AvailabilityZone`
-
         :param ex_volume_type: Type of volume to create.
         :type ex_volume_type: ``str``
 
@@ -2136,7 +2133,7 @@ class BaseEC2NodeDriver(NodeDriver):
         if not location:
             location = self.list_locations()[0]
 
-        params['AvailabilityZone'] = location.availability_zone.name
+        params['AvailabilityZone'] = location.name
 
         if ex_volume_type:
             params['VolumeType'] = ex_volume_type
