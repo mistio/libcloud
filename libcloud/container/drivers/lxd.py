@@ -17,12 +17,12 @@ import base64
 import re
 import os
 
+import collections
+
 try:
     import simplejson as json
 except Exception:
     import json
-
-import collections
 
 from libcloud.utils.py3 import httplib
 from libcloud.utils.py3 import b
@@ -48,7 +48,6 @@ LXD_API_IMAGE_SOURCE_TYPE = ["image", "migration", "copy", "none"]
 # the wording used by LXD to indicate that an error
 # occurred for a request
 LXD_ERROR_STATUS_RESP = 'error'
-DUMMY_POOL_NAME = "DummyPool"
 
 
 # helpers
@@ -82,7 +81,6 @@ def check_certificates(key_file, cert_file, **kwargs):
         key_file_suffix = key_file.split('.')
 
         if key_file_suffix[-1] not in kwargs['key_files_allowed']:
-
             raise InvalidCredsError("Valid key files are: " +
                                     str(kwargs['key_files_allowed']) +
                                     "you provided: " + key_file_suffix[-1])
@@ -92,7 +90,6 @@ def check_certificates(key_file, cert_file, **kwargs):
         cert_file_suffix = cert_file.split('.')
 
         if cert_file_suffix[-1] not in kwargs['cert_files_allowed']:
-
             raise InvalidCredsError("Valid certification files are: " +
                                     str(kwargs['cert_files_allowed']) +
                                     "you provided: " + cert_file_suffix[-1])
@@ -127,7 +124,6 @@ def assert_response(response_dict, status_code):
     # anything else apart from the status_code given should be treated as error
     if response_dict['status_code'] != status_code:
         # we have an unknown error
-
         msg = "Status code should be {0}\
          but is {1}".format(status_code, response_dict['status_code'])
         raise LXDAPIException(message=msg,
@@ -140,9 +136,11 @@ class LXDAPIException(Exception):
     returns with some kind of error
     """
 
-    def __init__(self, message="Unknown Error Occurred", response_dict=None):
+    def __init__(self, message="Unknown Error Occurred", response_dict=None,
+                 error_type=""):
         self.message = message
         self.response_dict = response_dict
+        self.type = error_type
 
         super(LXDAPIException, self).__init__(message)
 
@@ -380,10 +378,8 @@ class LXDContainerDriver(ContainerDriver):
     default_profiles = 'default'
 
     # An ephemeral container means that it
-    # will be destroyed once it is stopped
+    # will be restroyed once it is stopped
     default_ephemeral = False
-
-    INVALID_FINGER_PRINT = -1
 
     def __init__(self, key='', secret='', secure=False,
                  host='localhost', port=8443, key_file=None,
@@ -468,7 +464,6 @@ class LXDContainerDriver(ContainerDriver):
         response = self.connection.request("/%s" % (self.version))
         response_dict = response.parse_body()
         assert_response(response_dict=response_dict, status_code=200)
-
         meta = response_dict["metadata"]
         return LXDServerInfo.build_from_response(metadata=meta)
 
@@ -525,7 +520,7 @@ class LXDContainerDriver(ContainerDriver):
         to use as basis for limits e.g. "c2.micro"
         :type  ex_instance_type: ``str``
 
-        :param ex_timeout: Timeoute
+        :param ex_timeout: Timeout
         :type  ex_timeout: ``int``
 
         :rtype: :class:`libcloud.container.base.Container`
@@ -534,8 +529,7 @@ class LXDContainerDriver(ContainerDriver):
         if parameters:
             parameters = json.loads(parameters)
 
-            if "mode" in parameters["source"] and \
-                    parameters["source"]["mode"] == "pull":
+            if parameters["source"].get("mode", None) == "pull":
 
                 try:
                     # this means the image must be downloaded
@@ -615,7 +609,6 @@ class LXDContainerDriver(ContainerDriver):
 
     def start_container(self, container, ex_timeout=default_time_out,
                         ex_force=True, ex_stateful=True):
-
         """
         Start a container
 
@@ -639,7 +632,6 @@ class LXDContainerDriver(ContainerDriver):
 
     def stop_container(self, container, ex_timeout=default_time_out,
                        ex_force=True, ex_stateful=True):
-
         """
         Stop the given container
 
@@ -745,11 +737,9 @@ class LXDContainerDriver(ContainerDriver):
 
             response_dict = response.parse_body()
             assert_response(response_dict=response_dict, status_code=100)
-        except BaseHTTPError as e:
+        except BaseHTTPError as err:
             # handle the case where the container is running
-            message_list = e.message.split(",")
-            message = message_list[0].split(":")[-1]
-            raise LXDAPIException(message=message)
+            raise self._get_lxd_api_exception_for_error(err)
 
         try:
 
@@ -760,15 +750,12 @@ class LXDContainerDriver(ContainerDriver):
                                                          id,
                                                          ex_timeout)
             response = self.connection.request(req)
-        except BaseHTTPError as e:
+        except BaseHTTPError as err:
 
-            message_list = e.message.split(",")
-            message = message_list[0].split(":")[-1]
-
+            lxd_exception = self._get_lxd_api_exception_for_error(err)
             # if not found assume the operation completed
-            if message != '"not found"':
-                # something is wrong
-                raise LXDAPIException(message=e.message)
+            if lxd_exception.message != "not found":
+                raise lxd_exception
 
         response_dict = response.parse_body()
         assert_response(response_dict=response_dict, status_code=200)
@@ -944,9 +931,7 @@ class LXDContainerDriver(ContainerDriver):
         containers = []
         for item in meta:
             container_id = item.split('/')[-1]
-
             if not ex_detailed:
-
                 container = Container(driver=self, name=container_id,
                                       state=ContainerState.UNKNOWN,
                                       id=container_id,
@@ -982,8 +967,8 @@ class LXDContainerDriver(ContainerDriver):
         """
         Install a container image from a remote path. Not that the
         path currently is not used. Image data should be provided
-        int the ex_img_data under the key 'ex_img_data'. Creating
-        an image in LXD is an asynchronous operation
+        under the key 'ex_img_data'. Creating an image in LXD is an
+        asynchronous operation
 
         :param path: Path to the container image
         :type  path: ``str``
@@ -1037,15 +1022,12 @@ class LXDContainerDriver(ContainerDriver):
                                                          id,
                                                          ex_timeout)
             response = self.connection.request(req)
-        except BaseHTTPError as e:
+        except BaseHTTPError as err:
 
-            message_list = e.message.split(",")
-            message = message_list[0].split(":")[-1]
-
+            lxd_exception = self._get_lxd_api_exception_for_error(err)
             # if not found assume the operation completed
-            if message != '"not found"':
-                # something is wrong
-                raise LXDAPIException(message=e.message)
+            if lxd_exception.message != "not found":
+                raise lxd_exception
 
         config = json.loads(config)
 
@@ -1086,22 +1068,29 @@ class LXDContainerDriver(ContainerDriver):
 
     def ex_has_image(self, alias):
         """
-        Helper function. Returns true is the image with the
-        given alias exits on the host
+        Helper function. Returns true and the image fingerprint
+        if the image with the given alias exits on the host.
 
         :param alias: the image alias
         :type  alias: ``str``
 
-        :rtype: boolean
+        :rtype:  ``tupple`` :: (``boolean``, ``str``)
         """
 
         # get all the images existing on the host
-        images = self.list_images()
-
-        for img in images:
-            if alias == img.name:
-                return True, img.extra['fingerprint']
-        return False, LXDContainerDriver.INVALID_FINGER_PRINT
+        try:
+            response = self.connection.request(
+                '/{}/images/aliases/{}'.format(self.version, alias))
+            metadata = response.object['metadata']
+            return True, metadata.get('target')
+        except BaseHTTPError as err:
+            lxd_exception = self._get_lxd_api_exception_for_error(err)
+            if lxd_exception.message == "not found":
+                return False, -1
+            else:
+                raise lxd_exception
+        except Exception as err:
+            raise self._get_lxd_api_exception_for_error(err)
 
     def ex_list_storage_pools(self, detailed=True):
         """
@@ -1242,7 +1231,6 @@ class LXDContainerDriver(ContainerDriver):
 
         Authentication: trusted
         Operation: sync
-
         Return: list of storage volumes that
         currently exist on a given storage pool
 
@@ -1283,7 +1271,6 @@ class LXDContainerDriver(ContainerDriver):
         Operation: sync
         Return: A StorageVolume  representing a storage volume
         """
-
         req = "/%s/storage-pools/%s/volumes/%s/%s" % (self.version,
                                                       pool_id,
                                                       type, name)
@@ -1405,15 +1392,12 @@ class LXDContainerDriver(ContainerDriver):
                                                          oid,
                                                          ex_timeout)
             response = self.connection.request(req)
-        except BaseHTTPError as e:
+        except BaseHTTPError as err:
 
-            message_list = e.message.split(",")
-            message = message_list[0].split(":")[-1]
-
+            lxd_exception = self._get_lxd_api_exception_for_error(err)
             # if not found assume the operation completed
-            if message != '"not found"':
-                # something is wrong
-                raise LXDAPIException(message=e.message)
+            if lxd_exception.message != "not found":
+                raise lxd_exception
 
         response_dict = response.parse_body()
         assert_response(response_dict=response_dict, status_code=200)
@@ -1427,7 +1411,6 @@ class LXDContainerDriver(ContainerDriver):
         :param type:
         :param name:
         :param definition
-
         """
 
         if not definition:
@@ -1471,15 +1454,9 @@ class LXDContainerDriver(ContainerDriver):
 
             response_dict = response.parse_body()
             assert_response(response_dict=response_dict, status_code=200)
-        except BaseHTTPError as e:
+        except BaseHTTPError as err:
+            raise self._get_lxd_api_exception_for_error(err)
 
-            message_list = e.message.split(",")
-            message = message_list[0].split(":")[-1]
-
-            if message == '"The storage volume is still in use"':
-                raise LXDAPIException(message="The storage "
-                                              "volume is still in use")
-            raise
         return True
 
     def ex_list_networks(self):
@@ -1639,19 +1616,14 @@ class LXDContainerDriver(ContainerDriver):
                                                          id, timeout)
             response = self.connection.request(req)
 
-        except BaseHTTPError as e:
-
-            message_list = e.message.split(",")
-            message = message_list[0].split(":")[-1]
-
+        except BaseHTTPError as err:
+            lxd_exception = self._get_lxd_api_exception_for_error(err)
             # if not found assume the operation completed
-            if message != '"not found"':
-                # something is wrong
-                raise LXDAPIException(message=e.message)
+            if lxd_exception.message != "not found":
+                raise lxd_exception
 
         # if the container is ephemeral and the action is to stop
         # then the container is removed so return sth dummy
-
         if state == ContainerState.RUNNING and\
                 container.extra['ephemeral'] and action == 'stop':
             # return a dummy container otherwise we get 404 error
@@ -1763,15 +1735,11 @@ class LXDContainerDriver(ContainerDriver):
                                                              id,
                                                              timeout)
             response = self.connection.request(req_str)
-
-        except BaseHTTPError as e:
-
-            message_list = e.message.split(",")
-            message = message_list[0].split(":")[-1]
-            if message != '"not found"':
-                # somthing is wrong
-                raise LXDAPIException(message=e.message)
-
+        except BaseHTTPError as err:
+            lxd_exception = self._get_lxd_api_exception_for_error(err)
+            # if not found assume the operation completed
+            if lxd_exception.message != "not found":
+                raise lxd_exception
         return self.get_container(id=name)
 
     def _to_storage_volume(self, pool_id, metadata):
@@ -1885,6 +1853,12 @@ class LXDContainerDriver(ContainerDriver):
             cont_params["instance_type"] = instance_type
 
         return cont_params
+
+    def _get_lxd_api_exception_for_error(self, error):
+        error_dict = json.loads(error.message)
+        message = error_dict.get('error')
+        return LXDAPIException(message=message,
+                               error_type=error_dict.get('type', ''))
 
     @staticmethod
     def _to_gb(size):

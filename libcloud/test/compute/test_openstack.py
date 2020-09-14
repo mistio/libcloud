@@ -314,7 +314,7 @@ class OpenStack_1_0_Tests(TestCaseMixin, unittest.TestCase):
         metadata = {'a': 'b', 'c': 'd'}
         files = {'/file1': 'content1', '/file2': 'content2'}
         node = self.driver.create_node(name='racktest', image=image, size=size,
-                                       metadata=metadata, files=files)
+                                       ex_metadata=metadata, ex_files=files)
         self.assertEqual(node.name, 'racktest')
         self.assertEqual(node.extra.get('password'), 'racktestvJq7d3')
         self.assertEqual(node.extra.get('metadata'), metadata)
@@ -532,6 +532,16 @@ class OpenStackMockHttp(MockHttp, unittest.TestCase):
         return (httplib.ACCEPTED, body, XML_HEADERS, httplib.responses[httplib.ACCEPTED])
 
     def _v1_0_slug_images_detail(self, method, url, body, headers):
+        if method != "GET":
+            raise ValueError('Invalid method: %s' % (method))
+
+        body = self.fixtures.load('v1_slug_images_detail.xml')
+        return (httplib.OK, body, XML_HEADERS, httplib.responses[httplib.OK])
+
+    def _v1_0_slug_images_detail_invalid_next(self, method, url, body, headers):
+        if method != "GET":
+            raise ValueError('Invalid method: %s' % (method))
+
         body = self.fixtures.load('v1_slug_images_detail.xml')
         return (httplib.OK, body, XML_HEADERS, httplib.responses[httplib.OK])
 
@@ -950,7 +960,7 @@ class OpenStack_1_1_Tests(unittest.TestCase, TestCaseMixin):
         size = NodeSize(
             1, '256 slice', None, None, None, None, driver=self.driver)
         node = self.driver.create_node(name='racktest', image=image, size=size,
-                                       availability_zone='testaz')
+                                       ex_availability_zone='testaz')
         self.assertEqual(node.id, '26f7fbee-8ce1-4c28-887a-bfe8e4bb10fe')
         self.assertEqual(node.name, 'racktest')
         self.assertEqual(node.extra['password'], 'racktestvJq7d3')
@@ -1047,6 +1057,16 @@ class OpenStack_1_1_Tests(unittest.TestCase, TestCaseMixin):
             'cd76a3a1-c4ce-40f6-9b9f-07a61508938d')
         self.assertEqual(
             self.driver.attach_volume(node, volume, '/dev/sdb'), True)
+
+    def test_attach_volume_device_auto(self):
+        node = self.driver.list_nodes()[0]
+        volume = self.driver.ex_get_volume(
+            'cd76a3a1-c4ce-40f6-9b9f-07a61508938d')
+
+        OpenStack_2_0_MockHttp.type = 'DEVICE_AUTO'
+
+        self.assertEqual(
+            self.driver.attach_volume(node, volume, 'auto'), True)
 
     def test_detach_volume(self):
         node = self.driver.list_nodes()[0]
@@ -1442,6 +1462,11 @@ class OpenStack_1_1_Tests(unittest.TestCase, TestCaseMixin):
         self.assertEqual(ret[2].ip_address, '10.3.1.2')
         self.assertEqual(
             ret[2].node_id, 'cb4fba64-19e2-40fd-8497-f29da1b21143')
+        self.assertEqual(ret[3].id, '123c5336a-0629-4694-ba30-04b0bdfa88a4')
+        self.assertEqual(ret[3].pool, pool)
+        self.assertEqual(ret[3].ip_address, '10.3.1.3')
+        self.assertEqual(
+            ret[3].node_id, 'cb4fba64-19e2-40fd-8497-f29da1b21143')
 
     def test_OpenStack_2_FloatingIpPool_get_floating_ip(self):
         pool = OpenStack_2_FloatingIpPool(1, 'foo', self.driver.connection)
@@ -1677,6 +1702,13 @@ class OpenStack_2_Tests(OpenStack_1_1_Tests):
         self.assertEqual(snapshots[0]['name'], 'snap-101')
         self.assertEqual(snapshots[3]['name'], 'snap-001')
 
+    def test_list_images_with_pagination_invalid_response_no_infinite_loop(self):
+        # "next" attribute matches the current page, but it shouldn't result in
+        # an infite loop
+        OpenStack_2_0_MockHttp.type = 'invalid_next'
+        ret = self.driver.list_images()
+        self.assertEqual(len(ret), 2)
+
     # NOTE: We use a smaller limit to speed tests up.
     @mock.patch('libcloud.compute.drivers.openstack.PAGINATION_LIMIT', 10)
     def test__paginated_request_raises_if_stuck_in_a_loop(self):
@@ -1717,7 +1749,7 @@ class OpenStack_2_Tests(OpenStack_1_1_Tests):
 
     def test_list_images(self):
         images = self.driver.list_images()
-        self.assertEqual(len(images), 2, 'Wrong images count')
+        self.assertEqual(len(images), 3, 'Wrong images count')
 
         image = images[0]
         self.assertEqual(image.id, 'f24a3c1b-d52a-4116-91da-25b3eee8f55e')
@@ -1807,6 +1839,13 @@ class OpenStack_2_Tests(OpenStack_1_1_Tests):
         self.assertEqual(len(networks), 2)
         self.assertEqual(network.name, 'net1')
         self.assertEqual(network.extra['subnets'], ['54d6f61d-db07-451c-9ab3-b9609b6b6f0b'])
+
+    def test_ex_get_network(self):
+        network = self.driver.ex_get_network("cc2dad14-827a-feea-416b-f13e50511a0a")
+
+        self.assertEqual(network.id, "cc2dad14-827a-feea-416b-f13e50511a0a")
+        self.assertTrue(isinstance(network, OpenStackNetwork))
+        self.assertEqual(network.name, 'net2')
 
     def test_ex_list_subnets(self):
         subnets = self.driver.ex_list_subnets()
@@ -2274,7 +2313,19 @@ class OpenStack_1_1_MockHttp(MockHttp, unittest.TestCase):
 
     def _v2_1337_v2_images(self, method, url, body, headers):
         if method == "GET":
-            body = self.fixtures.load('_images_v2.json')
+            # 2nd (and last) page of images
+            if 'marker=e7a40226-3523-4f0f-87d8-d8dc91bbf4a3' in url:
+                body = self.fixtures.load('_images_v2_page2.json')
+            else:
+                # first page of images
+                body = self.fixtures.load('_images_v2.json')
+            return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
+        else:
+            raise NotImplementedError()
+
+    def _v2_1337_v2_images_invalid_next(self, method, url, body, headers):
+        if method == "GET":
+            body = self.fixtures.load('_images_v2_invalid_next.json')
             return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
         else:
             raise NotImplementedError()
@@ -2323,6 +2374,17 @@ class OpenStack_1_1_MockHttp(MockHttp, unittest.TestCase):
                 return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
             else:
                 return (httplib.INTERNAL_SERVER_ERROR, "", {}, httplib.responses[httplib.INTERNAL_SERVER_ERROR])
+        else:
+            raise NotImplementedError()
+
+    def _v2_1337_servers_12065_os_volume_attachments_DEVICE_AUTO(self, method, url, body, headers):
+        # test_attach_volume_device_auto
+        if method == "POST":
+            if 'rackspace' not in self.__class__.__name__.lower():
+                body = json.loads(body)
+                self.assertEqual(body['volumeAttachment']['device'], None)
+
+            return (httplib.NO_CONTENT, "", {}, httplib.responses[httplib.NO_CONTENT])
         else:
             raise NotImplementedError()
 
@@ -2436,6 +2498,10 @@ class OpenStack_1_1_MockHttp(MockHttp, unittest.TestCase):
 
     def _v1_1_slug_servers_12065_os_volume_attachments(self, method, url, body, headers):
         if method == "POST":
+            if 'rackspace' not in self.__class__.__name__.lower():
+                body = json.loads(body)
+                self.assertEqual(body['volumeAttachment']['device'], '/dev/sdb')
+
             body = self.fixtures.load(
                 '_servers_12065_os_volume_attachments.json')
         else:
@@ -2576,6 +2642,12 @@ class OpenStack_1_1_MockHttp(MockHttp, unittest.TestCase):
             return (httplib.ACCEPTED, body, self.json_content_headers, httplib.responses[httplib.OK])
         raise NotImplementedError()
 
+    def _v2_1337_v2_0_networks_cc2dad14_827a_feea_416b_f13e50511a0a(self, method, url, body, headers):
+        if method == "GET":
+            body = self.fixtures.load('_v2_0__network.json')
+            return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
+        raise NotImplementedError()
+
     def _v2_1337_v2_0_networks_d32019d3_bc6e_4319_9c1d_6722fc136a22(self, method, url, body, headers):
         if method == 'GET':
             body = self.fixtures.load('_v2_0__networks_POST.json')
@@ -2682,7 +2754,7 @@ class OpenStack_1_1_MockHttp(MockHttp, unittest.TestCase):
         if method == 'GET':
             body = self.fixtures.load('_v2_0__floatingips.json')
             return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
-    
+
     def _v2_1337_v2_0_floatingips_foo_bar_id(self, method, url, body, headers):
         if method == 'DELETE':
             body = ''

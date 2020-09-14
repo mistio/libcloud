@@ -861,7 +861,7 @@ class ECSDriver(NodeDriver):
                                 driver=self)
         node = nodes[0]
         self._wait_until_state([node], NodeState.STOPPED)
-        self.ex_start_node(node)
+        self.start_node(node)
         self._wait_until_state(nodes, NodeState.RUNNING)
 
         if 'ex_allocate_public_ip_address' in kwargs:
@@ -894,14 +894,14 @@ class ECSDriver(NodeDriver):
         current = nodes[0]
         if current.state == NodeState.RUNNING:
             # stop node first
-            self.ex_stop_node(node)
+            self.stop_node(node)
             self._wait_until_state(nodes, NodeState.STOPPED)
         params = {'Action': 'DeleteInstance',
                   'InstanceId': node.id}
         resp = self.connection.request(self.path, params)
         return resp.success()
 
-    def ex_start_node(self, node):
+    def start_node(self, node):
         """
         Start node to running state.
 
@@ -917,7 +917,7 @@ class ECSDriver(NodeDriver):
         return resp.success() and \
             self._wait_until_state([node], NodeState.RUNNING)
 
-    def ex_stop_node(self, node, ex_force_stop=False):
+    def stop_node(self, node, ex_force_stop=False):
         """
         Stop a running node.
 

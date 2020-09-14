@@ -17,7 +17,7 @@
 VMware vSphere driver. Uses pyvmomi - https://github.com/vmware/pyvmomi
 Code inspired by https://github.com/vmware/pyvmomi-community-samples
 
-Author: Markos Gogoulos -  mgogoulos@mist.io
+Authors: Dimitris Moraitis, Alex Tsiliris, Markos Gogoulos
 """
 
 import time
@@ -35,9 +35,9 @@ try:
     from pyVim import connect
     from pyVmomi import vim, vmodl, VmomiSupport
     from pyVim.task import WaitForTask
+    pyvmomi = True
 except ImportError:
-    raise ImportError('Missing "pyvmomi" dependency. You can install it '
-                      'using pip - pip install pyvmomi')
+    pyvmomi = None
 
 import atexit
 
@@ -92,6 +92,10 @@ class VSphereNodeDriver(NodeDriver):
         """Initialize a connection by providing a hostname,
         username and password
         """
+        if pyvmomi is None:
+            raise ImportError('Missing "pyvmomi" dependency. '
+                              'You can install it '
+                              'using pip - pip install pyvmomi')
         self.host = host
         try:
             if ca_cert is None:
@@ -516,7 +520,7 @@ class VSphereNodeDriver(NodeDriver):
         uuid = vm.get('summary.config.instanceUuid') or \
             (vm.get('obj').config and vm.get('obj').config.instanceUuid)
         if not uuid:
-            logger.error('No uuid for vm:', vm)
+            logger.error('No uuid for vm: {}'.format(vm))
         annotation = vm.get('summary.config.annotation')
         state = vm.get('summary.runtime.powerState')
         status = self.NODE_STATE_MAP.get(state, NodeState.UNKNOWN)
@@ -564,7 +568,7 @@ class VSphereNodeDriver(NodeDriver):
                     public_ips.append(ip_address)
                 else:
                     private_ips.append(ip_address)
-            except:
+            except Exception:
                 # IPV6 not supported
                 pass
         if vm.get('snapshot'):
@@ -651,7 +655,7 @@ class VSphereNodeDriver(NodeDriver):
                     public_ips.append(ip_address)
                 else:
                     private_ips.append(ip_address)
-            except:
+            except Exception:
                 # IPV6 not supported
                 pass
         if virtual_machine.snapshot:
@@ -934,7 +938,7 @@ class VSphereNodeDriver(NodeDriver):
                 storageSpec=storagespec)
             rec_action = rec.recommendations[0].action[0]
             real_datastore_name = rec_action.destination.name
-        except:
+        except Exception:
             real_datastore_name = template.datastore[0].info.name
 
         datastore = self.get_obj([vim.Datastore], real_datastore_name)
@@ -1082,7 +1086,8 @@ class VSphereNodeDriver(NodeDriver):
     def ex_open_console(self, vm_uuid):
         vm = self.find_by_uuid(vm_uuid)
         ticket = vm.AcquireTicket(ticketType='webmks')
-        return f'wss://{ticket.host}:{ticket.port}/ticket/{ticket.ticket}'
+        return 'wss://{}:{}/ticket/{}'.format(
+            ticket.host, ticket.port, ticket.ticket)
 
     def _get_version(self):
         content = self.connection.RetrieveContent()
@@ -1193,19 +1198,23 @@ class VSphere_6_7_NodeDriver(NodeDriver):
         self.username = key
         # getting session token
         self._get_session_token()
-        self.driver6_5 = self._get_6_5_driver()
+        self.driver_soap = None
 
-    def _get_6_5_driver(self):
-        return VSphereNodeDriver(self.host, self.username,
-                                 self.connection.secret,
-                                 ca_cert=self.
-                                 connection.connection.ca_cert)
+    def _get_soap_driver(self):
+        if pyvmomi is None:
+            raise ImportError('Missing "pyvmomi" dependency. '
+                              'You can install it '
+                              'using pip - pip install pyvmomi')
+        self.driver_soap =  VSphereNodeDriver(self.host, self.username,
+                                              self.connection.secret,
+                                              ca_cert=self.
+                                              connection.connection.ca_cert)
 
     def _get_session_token(self):
         uri = "/rest/com/vmware/cis/session"
         try:
             result = self.connection.request(uri, method="POST")
-        except Exception as exc:
+        except Exception:
             raise
         self.session_token = result.object['value']
         self.connection.session_token = self.session_token
@@ -1521,7 +1530,7 @@ class VSphere_6_7_NodeDriver(NodeDriver):
         try:
             result = self._request(req).object
             return result['value']
-        except BaseHTTPError as exc:
+        except BaseHTTPError:
             return []
 
     def ex_list_content_library_items(self, library_id):
@@ -1530,7 +1539,7 @@ class VSphere_6_7_NodeDriver(NodeDriver):
         try:
             result = self._request(req, params=params).object
             return result['value']
-        except BaseHTTPError as exc:
+        except BaseHTTPError:
             logger.error('Library was cannot be accesed, '
                          ' most probably the VCenter service '
                          'is stopped')
@@ -1655,7 +1664,7 @@ class VSphere_6_7_NodeDriver(NodeDriver):
                                                  params=params, data=data)
             else:
                 raise
-        except Exception as exc:
+        except Exception:
             raise
         return result
 
@@ -1682,7 +1691,9 @@ class VSphere_6_7_NodeDriver(NodeDriver):
                 images.append(NodeImage(id=item['id'],
                               name=item['name'],
                               driver=driver, extra=extra))
-        templates_in_hosts = self.driver6_5.list_images()
+        if self.driver_soap is None:
+            self._get_soap_driver()
+        templates_in_hosts = self.driver_soap.list_images()
         for template in templates_in_hosts:
             if template.name not in names:
                 images += [template]
@@ -1723,7 +1734,9 @@ class VSphere_6_7_NodeDriver(NodeDriver):
                     kwargs['ex_datastore'] = dstore['name']
                     break
             kwargs['folder'] = ex_folder
-            result = self.driver6_5.create_node(**kwargs)
+            if self.driver_soap is None:
+                self._get_soap_driver()
+            result = self.driver_soap.create_node(**kwargs)
             return result
 
         # post creation checks
@@ -1789,7 +1802,7 @@ class VSphere_6_7_NodeDriver(NodeDriver):
                 if not resource_pool:
                     msg = ("Could not find resource-pool for given location "
                            "(host). Please make sure the location is valid.")
-                    raise VSphereException(code="504", msg=msg)
+                    raise VSphereException(code="504", message=msg)
                 spec['target']['resource_pool_id'] = resource_pool
                 spec['target']['host_id'] = location.id
             elif location.extra.get('type') == 'cluster':
@@ -1798,7 +1811,7 @@ class VSphere_6_7_NodeDriver(NodeDriver):
                     msg = ("Could not find resource-pool for given location "
                            "(cluster). Please make sure the location "
                            "is valid.")
-                    raise VSphereException(code="504", msg=msg)
+                    raise VSphereException(code="504", message=msg)
                 spec['target']['resource_pool_id'] = resource_pool
             ovf = self._request(ovf_request, method="POST",
                                 data=json.dumps(spec)).object['value']
@@ -1937,17 +1950,21 @@ class VSphere_6_7_NodeDriver(NodeDriver):
         """
         List node snapshots
         """
-        return self.driver6_5.ex_list_snapshots(node)
+        if self.driver_soap is None:
+            self._get_soap_driver()
+        return self.driver_soap.ex_list_snapshots(node)
 
     def ex_create_snapshot(self, node, snapshot_name, description='',
                            dump_memory=False, quiesce=False):
         """
         Create node snapshot
         """
-        return self.driver6_5.ex_create_snapshot(node, snapshot_name,
-                                                 description=description,
-                                                 dump_memory=dump_memory,
-                                                 quiesce=False)
+        if self.driver_soap is None:
+            self._get_soap_driver()
+        return self.driver_soap.ex_create_snapshot(node, snapshot_name,
+                                                   description=description,
+                                                   dump_memory=dump_memory,
+                                                   quiesce=False)
 
     def ex_remove_snapshot(self, node, snapshot_name=None,
                            remove_children=True):
@@ -1955,7 +1972,9 @@ class VSphere_6_7_NodeDriver(NodeDriver):
         Remove a snapshot from node.
         If snapshot_name is not defined remove the last one.
         """
-        return self.driver6_5.ex_remove_snapshot(
+        if self.driver_soap is None:
+            self._get_soap_driver()
+        return self.driver_soap.ex_remove_snapshot(
             node, snapshot_name=snapshot_name, remove_children=remove_children)
 
     def ex_revert_to_snapshot(self, node, snapshot_name=None):
@@ -1963,8 +1982,12 @@ class VSphere_6_7_NodeDriver(NodeDriver):
         Revert node to a specific snapshot.
         If snapshot_name is not defined revert to the last one.
         """
-        return self.driver6_5.ex_revert_to_snapshot(
+        if self.driver_soap is None:
+            self._get_soap_driver()
+        return self.driver_soap.ex_revert_to_snapshot(
             node, snapshot_name=snapshot_name)
 
     def ex_open_console(self, vm_id):
-        return self.driver6_5.ex_open_console(vm_id)
+        if self.driver_soap is None:
+            self._get_soap_driver()
+        return self.driver_soap.ex_open_console(vm_id)
