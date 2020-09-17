@@ -400,7 +400,6 @@ class VSphereNodeDriver(NodeDriver):
         nodes = loop.run_until_complete(self._to_nodes(vm_list))
         if enhance:
             nodes = self._enhance_metadata(nodes, content)
-
         return nodes
 
     def list_nodes_recursive(self, enhance=True):
@@ -500,6 +499,12 @@ class VSphereNodeDriver(NodeDriver):
         memory = vm.get('summary.config.memorySizeMB')
         cpus = vm.get('summary.config.numCpu')
         disk = vm.get('summary.storage.committed', 0) // (1024 ** 3)
+        folder = vm.get('obj').parent
+        if isinstance(folder, vim.Folder):
+            folder = folder.name
+        else:
+            folder = ""
+        datastore = vm.get('obj').config.datastoreUrl[0].name
         id_to_hash = str(memory) + str(cpus) + str(disk)
         size_id = hashlib.md5(id_to_hash.encode("utf-8")).hexdigest()
         size_name = name + "-size"
@@ -538,7 +543,9 @@ class VSphereNodeDriver(NodeDriver):
             'cpus': cpus,
             'overall_status': overall_status,
             'metadata': {},
-            'snapshots': []
+            'snapshots': [],
+            'folder': folder,
+            'datastore': datastore
         }
 
         if disk:
@@ -592,6 +599,12 @@ class VSphereNodeDriver(NodeDriver):
         if summary.storage.committed:
             disk = summary.storage.committed / (1024 ** 3)
         id_to_hash = str(memory) + str(cpus) + str(disk)
+        folder = virtual_machine.parent
+        if isinstance(folder, vim.Folder):
+            folder = folder.name
+        else:
+            folder = ""
+        datastore = virtual_machine.config.datastoreUrl[0].name
         size_id = hashlib.md5(id_to_hash.encode("utf-8")).hexdigest()
         size_name = name + "-size"
         size_extra = {'cpus': cpus}
@@ -626,7 +639,9 @@ class VSphereNodeDriver(NodeDriver):
             "cpus": cpus,
             "overallStatus": overall_status,
             "metadata": {},
-            "snapshots": []
+            "snapshots": [],
+            "folder": folder,
+            "datastore": datastore
         }
 
         if disk:
@@ -700,6 +715,12 @@ class VSphereNodeDriver(NodeDriver):
         """
         vm = self.find_by_uuid(node.id)
         return self.wait_for_task(vm.PowerOn())
+
+    def ex_rename_node(self, node, name):
+        """
+        """
+        vm = self.find_by_uuid(node.id)
+        return self.wait_for_task(vm.Rename(name))
 
     def ex_list_snapshots(self, node):
         """
