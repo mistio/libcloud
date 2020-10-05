@@ -259,6 +259,13 @@ class VSphereNodeDriver(NodeDriver):
 
         for vm in vms:
             if vm.config and vm.config.template:
+                # Sometimes a buggy VM with no uuid might show up
+                if vm.summary.config.instanceUuid is None:
+                    name = vm.summary.config.name
+                    logger.error("Template {} has no uuid and it will be "
+                                 "skipped from the list. Check it directly"
+                                 " at the vCenter client.".format(name))
+                    continue
                 images.append(self._to_image(vm))
 
         return images
@@ -468,6 +475,12 @@ class VSphereNodeDriver(NodeDriver):
         for vm in vm_list:
             if vm.get('config.template'):
                 continue  # Do not include templates in node list
+            elif vm.get('summary.config.instanceUuid') is None:
+                name = vm.get('summary.config.name')
+                logger.error("VM {} has no uuid, it will be skipped from"
+                             " the list. Check it directly at the"
+                             " vCenter client.".format(name))
+                continue
             vms.append(vm)
         loop = asyncio.get_event_loop()
         vms = [
@@ -1226,10 +1239,10 @@ class VSphere_6_7_NodeDriver(NodeDriver):
             raise ImportError('Missing "pyvmomi" dependency. '
                               'You can install it '
                               'using pip - pip install pyvmomi')
-        self.driver_soap =  VSphereNodeDriver(self.host, self.username,
-                                              self.connection.secret,
-                                              ca_cert=self.
-                                              connection.connection.ca_cert)
+        self.driver_soap = VSphereNodeDriver(self.host, self.username,
+                                             self.connection.secret,
+                                             ca_cert=self.
+                                             connection.connection.ca_cert)
 
     def _get_session_token(self):
         uri = "/rest/com/vmware/cis/session"
