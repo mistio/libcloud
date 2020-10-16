@@ -508,7 +508,9 @@ class VSphereNodeDriver(NodeDriver):
             folder = folder.name
         else:
             folder = ""
-        datastore = vm.get('obj').config.datastoreUrl[0].name
+        datastore = ""
+        if vm.get('obj').config:
+            datastore = vm.get('obj').config.datastoreUrl[0].name
         id_to_hash = str(memory) + str(cpus) + str(disk)
         size_id = hashlib.md5(id_to_hash.encode("utf-8")).hexdigest()
         size_name = name + "-size"
