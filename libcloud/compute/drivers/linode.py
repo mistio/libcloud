@@ -1587,7 +1587,7 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
             'state': self.LINODE_VOLUME_STATES[data['status']]
         }
         return StorageVolume(
-            id=data['id'],
+            id=str(data['id']),
             name=data['label'],
             size=data['size'],
             driver=self,
