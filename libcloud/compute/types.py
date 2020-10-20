@@ -109,6 +109,7 @@ class Provider(Type):
     EC2 = 'ec2'
     ECP = 'ecp'
     ELASTICHOSTS = 'elastichosts'
+    EQUINIXMETAL = 'equinixmetal'
     EUCALYPTUS = 'eucalyptus'
     EXOSCALE = 'exoscale'
     GANDI = 'gandi'
@@ -143,7 +144,6 @@ class Provider(Type):
     OUTSCALE_SAS = 'outscale_sas'
     OUTSCALE = 'outscale'
     OVH = 'ovh'
-    PACKET = 'packet'
     PROFIT_BRICKS = 'profitbricks'
     RACKSPACE = 'rackspace'
     RACKSPACE_FIRST_GEN = 'rackspace_first_gen'
@@ -338,6 +338,7 @@ class DeploymentError(LibcloudError):
     :ivar node: :class:`Node` on which this exception happened, you might want
                 to call :func:`Node.destroy`
     """
+
     def __init__(self, node, original_exception=None, driver=None):
         self.node = node
         self.value = original_exception
@@ -349,7 +350,7 @@ class DeploymentError(LibcloudError):
 
     def __repr__(self):
         return (('<DeploymentError: node=%s, error=%s, driver=%s>'
-                % (self.node.id, str(self.value), str(self.driver))))
+                 % (self.node.id, str(self.value), str(self.driver))))
 
 
 class KeyPairError(LibcloudError):
