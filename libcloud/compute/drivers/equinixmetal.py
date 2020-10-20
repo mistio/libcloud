@@ -450,8 +450,11 @@ def _list_async(driver):
             cpus = data['specs']['cpus'][0].get('count')
         except KeyError:
             cpus = None
-        regions = [region.get('href').replace('/facilities/', '')
-            for region in data.get('available_in')]
+        try:
+            regions = [region.get('href').replace('/facilities/', '')
+                       for region in data.get('available_in')]
+        except TypeError:
+            regions = None
         extra = {'description': data['description'], 'line': data['line'],
                  'cpus': cpus, 'regions': regions}
         try:
