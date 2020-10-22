@@ -1,8 +1,7 @@
 EquinixMetal Compute Driver Documentation
-===================================
+=========================================
 
-`EquinixMetal`_ is a dedicated bare metal cloud hosting provider based in New York
-City
+`EquinixMetal`_ is a dedicated bare metal cloud hosting provider
 
 .. figure:: /_static/images/provider_logos/packet.png
     :align: center
