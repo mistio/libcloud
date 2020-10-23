@@ -312,12 +312,12 @@ class LinodeTestsV4(unittest.TestCase, TestCaseMixin):
         volume = self.driver.list_volumes()[0]
         node = self.driver.list_nodes()[0]
         with self.assertRaises(LinodeExceptionV4):
-            self.driver.attach_volume(volume, node)
+            self.driver.attach_volume(node, volume)
 
     def test_attach_volume(self):
         volume = self.driver.list_volumes()[1]
         node = self.driver.list_nodes()[0]
-        attached_volume = self.driver.attach_volume(volume, node)
+        attached_volume = self.driver.attach_volume(node, volume)
         self.assertIsInstance(attached_volume, StorageVolume)
         self.assertEqual(str(attached_volume.extra['linode_id']), node.id)
 

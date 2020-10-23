@@ -1171,7 +1171,7 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
                                            method='POST').object
         return self._to_volume(response)
 
-    def attach_volume(self, volume, node, persist_across_boots=True):
+    def attach_volume(self, node, volume, persist_across_boots=True):
         """Attaches a volume to a node.
         Volume and node must be located in the same region
 
