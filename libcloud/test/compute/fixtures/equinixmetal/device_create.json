@@ -69,6 +69,17 @@
           "cpus": [{"count": 1, "type": "Intel E3-1240 v3"}],
           "memory": {"total": "16GB"}
         },
-      "name": "Type 1"
+      "name": "Type 1",
+      "available_in": [
+          {
+            "href": "/facilities/2b70eb8f-fa18-47c0-aba7-222a842362fd"
+          },
+          {
+            "href": "/facilities/8ea03255-89f9-4e62-9d3f-8817db82ceed"
+          },
+          {
+            "href": "/facilities/8e6470b3-b75e-47d1-bb93-45b225750975"
+          }
+        ]
     }
 }
