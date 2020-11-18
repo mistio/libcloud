@@ -2406,6 +2406,7 @@ class AzureNodeDriver(NodeDriver):
                         addr = pub_addr.extra.get("ipAddress")
                         if addr:
                             public_ips.append(addr)
+                    subnet = n.extra["ipConfigurations"][0]["properties"]["subnet"].get("id")
                 except BaseHTTPError:
                     pass
 
@@ -2462,6 +2463,7 @@ class AzureNodeDriver(NodeDriver):
                 pass
 
         extra["networkProfile"] = data['properties']["networkProfile"]["networkInterfaces"]
+        extra["subnet"] = subnet
 
         subscription = re.search(r"/subscriptions/(.*?)/resourceGroups", data['id'])
         if subscription:
