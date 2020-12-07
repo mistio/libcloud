@@ -999,7 +999,7 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
         :rtype  : :class:`Node`
         """
         response = self.connection.request('/v4/linode/instances/%s'
-                                            % node_id).object
+                                           % node_id).object
         return self._to_node(response)
 
     def ex_list_disks(self, node):
@@ -1327,7 +1327,7 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
         :rtype:   :class:`StorageVolume`
         """
         response = self.connection.request('/v4/volumes/%s'
-                                      % volume_id).object
+                                           % volume_id).object
         return self._to_volume(response)
 
     def create_image(self, disk, name=None, description=None):
