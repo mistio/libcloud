@@ -1176,14 +1176,15 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
         """Attaches a volume to a node.
         Volume and node must be located in the same region
 
+        :param node: Node to attach the volume to(required)
+        :type node: :class:`Node`
+
         :param volume: Volume to be attached (required)
         :type volume: :class:`StorageVolume`
 
-        :param volume: Node to attach the volume to(required)
-        :type volume: :class:`Node`
-
-        :keyword persist_across_boots: Node to attach the volume to(required)
-        :type volume: :class:`Node`
+        :keyword persist_across_boots: Wether volume should be \
+        attached to node across boots
+        :type persist_across_boots: `bool`
 
         :rtype: :class: `StorageVolume`
         """
@@ -1383,7 +1384,7 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
         :type node: :class:`Node`
 
         :keyword address_type: Type of IP address
-        :type address_type: `bool`
+        :type address_type: `str`
 
         :return: The newly created LinodeIPAddress
         :rtype: :class:`LinodeIPAddress`
@@ -1409,7 +1410,7 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
                                            method='POST').object
         return self._to_address(response)
 
-    def ex_share_address(self, node, addresses=[]):
+    def ex_share_address(self, node, addresses):
         """Shares an IP with another node.This can be used to allow one Linode
          to begin serving requests should another become unresponsive.
 
@@ -1450,7 +1451,7 @@ class LinodeNodeDriverV4(LinodeNodeDriver):
         :type node: :class:`Node`
 
         :param size: the size of the new node
-        :type node: :class:`NodeSize`
+        :type size: :class:`NodeSize`
 
         :keyword allow_auto_disk_resize: Automatically resize disks \
         when resizing a node.
