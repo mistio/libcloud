@@ -78,6 +78,7 @@ class Provider(Type):
     :cvar OPSOURCE: Opsource Cloud
     :cvar OUTSCALE_INC: Outscale INC driver.
     :cvar OUTSCALE_SAS: Outscale SAS driver.
+    :cvar OUTSCALE_SDK: Outscale SDK driver.
     :cvar PROFIT_BRICKS: ProfitBricks driver.
     :cvar RACKSPACE: Rackspace next-gen OpenStack based Cloud Servers
     :cvar RACKSPACE_FIRST_GEN: Rackspace First Gen Cloud Servers
@@ -87,6 +88,7 @@ class Provider(Type):
     :cvar VCL: VCL driver
     :cvar VCLOUD: vmware vCloud
     :cvar VPSNET: VPS.net
+    :cvar VSphere: VSphere driver.
     :cvar VULTR: vultr driver.
     """
     AZURE = 'azure'
@@ -141,6 +143,7 @@ class Provider(Type):
     OPSOURCE = 'opsource'
     OUTSCALE_INC = 'outscale_inc'
     OUTSCALE_SAS = 'outscale_sas'
+    OUTSCALE = 'outscale'
     OVH = 'ovh'
     PROFIT_BRICKS = 'profitbricks'
     RACKSPACE = 'rackspace'
@@ -202,10 +205,6 @@ class Provider(Type):
     # Removed
     # SLICEHOST = 'slicehost'
 
-    SOLUSVM = 'solusvm'
-
-    CLEARCENTER = "clearcenter"
-    CLEARAPI = "clearapi"
 
 DEPRECATED_RACKSPACE_PROVIDERS = [Provider.RACKSPACE_UK,
                                   Provider.RACKSPACE_NOVA_BETA,
@@ -282,7 +281,6 @@ class NodeState(Type):
     MIGRATING = 'migrating'
     NORMAL = 'normal'
     UPDATING = 'updating'
-    OFF = 'off'
 
 
 class StorageVolumeState(Type):

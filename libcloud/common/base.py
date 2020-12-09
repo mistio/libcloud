@@ -551,11 +551,7 @@ class Connection(object):
         self.data = data
 
         # Extend default parameters
-        import inspect
-        if len(inspect.getargspec(self.add_default_params).args) == 3:
-            params = self.add_default_params(params, method)
-        else:
-            params = self.add_default_params(params)
+        params = self.add_default_params(params)
 
         # Add cache busting parameters (if enabled)
         if self.cache_busting and method == 'GET':

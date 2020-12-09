@@ -37,6 +37,7 @@ import socket
 import random
 import binascii
 import datetime
+import traceback
 import atexit
 
 from libcloud.utils.py3 import b
@@ -1797,7 +1798,13 @@ class NodeDriver(BaseDriver):
 
                 # Retry if a connection is refused, timeout occurred,
                 # or the connection fails due to failed authentication.
-                ssh_client.close()
+                try:
+                    ssh_client.close()
+                except Exception:
+                    # Exception on close() should not be fatal since client
+                    # socket might already be closed
+                    pass
+
                 time.sleep(wait_period)
                 continue
             else:
@@ -1875,9 +1882,28 @@ class NodeDriver(BaseDriver):
             except Exception as e:
                 tries += 1
 
+                if "ssh session not active" in str(e).lower():
+                    # Sometimes connection gets closed or disconnected half
+                    # way through for wahtever reason.
+                    # If this happens, we try to re-connect before
+                    # re-attempting to run the step.
+                    try:
+                        ssh_client.close()
+                    except Exception:
+                        # Non fatal since connection is most likely already
+                        # closed at this point
+                        pass
+
+                    timeout = (int(ssh_client.timeout) if ssh_client.timeout
+                               else 10)
+                    ssh_client = self._ssh_client_connect(
+                        ssh_client=ssh_client,
+                        timeout=timeout)
+
                 if tries >= max_tries:
-                    raise LibcloudError(value='Failed after %d tries: %s'
-                                        % (max_tries, str(e)), driver=self)
+                    tb = traceback.format_exc()
+                    raise LibcloudError(value='Failed after %d tries: %s.\n%s'
+                                        % (max_tries, str(e), tb), driver=self)
             else:
                 # Deployment succeeded
                 ssh_client.close()
@@ -1886,7 +1912,7 @@ class NodeDriver(BaseDriver):
         return node
 
     def _get_size_price(self, size_id):
-        # type: (str) -> float
+        # type: (str) -> Optional[float]
         """
         Return pricing information for the provided size id.
         """

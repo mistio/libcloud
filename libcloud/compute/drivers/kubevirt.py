@@ -18,25 +18,16 @@
 """
 kubevirt driver with support for nodes (vms)
 """
-import os
 import json
 import time
-import warnings
 import hashlib
 
 from datetime import datetime
 
-import libcloud.security
-
-from libcloud.common.kubernetes import KubernetesResponse
+from libcloud.common.types import LibcloudError
 from libcloud.common.kubernetes import KubernetesBasicAuthConnection
 from libcloud.common.kubernetes import KubernetesDriverMixin
-from libcloud.common.kubernetes import KubernetesTLSAuthConnection
-from libcloud.common.kubernetes import KubernetesTokenAuthConnection
 from libcloud.common.kubernetes import VALID_RESPONSE_CODES
-
-from libcloud.common.base import KeyCertificateConnection, ConnectionKey
-from libcloud.common.types import InvalidCredsError, ProviderError
 
 from libcloud.compute.types import Provider, NodeState
 from libcloud.compute.base import NodeDriver, NodeSize, Node
@@ -177,13 +168,14 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
         # find and delete services for this VM only
         services = self.ex_list_services(namespace=namespace, node_name=name)
         for service in services:
-            service_type = service['spec']['type']
-            self.ex_create_service(node=node, ports=[], 
-                                   service_type=service_type)
+            service_name = service['metadata']['name']
+            self.ex_delete_service(namespace=namespace,
+                                   service_name=service_name)
         # stop the vmi
         self.stop_node(node)
         try:
-            result = self.connection.request(KUBEVIRT_URL + 'namespaces/' +
+            result = self.connection.request(KUBEVIRT_URL +
+                                             'namespaces/' +
                                              namespace +
                                              '/virtualmachines/' + name,
                                              method='DELETE')
@@ -193,8 +185,9 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
 
     # only has container disk support atm with no persistency
     def create_node(self, name, image, location=None, ex_memory=128, ex_cpu=1,
-                    ex_disks=None, ex_network=None, ex_termination_grace_period=0,
-                    ports={}):
+                    ex_disks=None, ex_network=None,
+                    ex_termination_grace_period=0,
+                    ports=None):
         """
         Creating a VM with a containerDisk.
         :param name: A name to give the VM. The VM will be identified by
@@ -337,7 +330,7 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
         vm['spec']['template']['spec']['domain']['resources'][
             'limits']['memory'] = memory
         if ex_cpu < 10:
-            cpu = str(ex_cpu)
+            cpu = int(ex_cpu)
             vm['spec']['template']['spec']['domain'][
                 'resources']['requests']['cpu'] = cpu
             vm['spec']['template']['spec']['domain'][
@@ -436,6 +429,7 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
             network_type = "pod"
         network_dict = {network_type: {}, 'name': network_name}
         interface_dict = {interface: {}, 'name': network_name}
+        ports = ports or {}
         if ports.get('ports_tcp'):
             ports_to_expose = []
             for port in ports['ports_tcp']:
@@ -976,8 +970,9 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
                     'domain']['resources']['limits']:
                 memory = vm['spec']['template']['spec'][
                     'domain']['resources']['limits']['memory']
-        elif vm['spec']['template']['spec']['domain'][
-             'resources'].get('requests', None):
+        elif vm['spec']['template']['spec']['domain']['resources'].get(
+                'requests', None):
+
             if vm['spec']['template']['spec'][
                'domain']['resources']['requests'].get('memory', None):
                 memory = vm['spec']['template']['spec'][
@@ -1147,8 +1142,8 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
         type  ports: `list` of `dict` where each `dict` has keys --> values:
                      'port' --> `int`
                      'target_port' --> `int`
-                     'protocol' --> `str
-                     'name' --> str
+                     'protocol' --> `str`
+                     'name' --> `str`
 
         param service_type: Valid types are ClusterIP, NodePort, LoadBalancer
         type  service_type: `str`
@@ -1192,7 +1187,13 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
         data = None
         if len(service_list) > 0:
             if not ports:
-                method = 'DELETE'
+                result = True
+                for service in service_list:
+                    service_name = service['metadata']['name']
+                    result = result and self.ex_delete_service(
+                        namespace=namespace,
+                        service_name=service_name)
+                return result
             else:
                 method = 'PATCH'
                 spec = {'ports': ports_to_expose}
@@ -1239,6 +1240,17 @@ class KubeVirtNodeDriver(KubernetesDriverMixin, NodeDriver):
         try:
             result = self.connection.request(req, method=method, data=data,
                                              headers=headers)
-        except Exception as exc:
+        except Exception:
+            raise
+        return result.status in VALID_RESPONSE_CODES
+
+    def ex_delete_service(self, namespace, service_name):
+        req = "{}/namespaces/{}/services/{}".format(ROOT_URL, namespace,
+                                                    service_name)
+        headers = {"Content-Type": "application/yaml"}
+        try:
+            result = self.connection.request(req, method="DELETE",
+                                             headers=headers)
+        except Exception:
             raise
         return result.status in VALID_RESPONSE_CODES

@@ -24,7 +24,6 @@ import base64
 import copy
 import warnings
 import time
-import random
 
 from libcloud.utils.py3 import ET
 from libcloud.utils.py3 import b, basestring, ensure_string
@@ -37,20 +36,19 @@ from libcloud.common.aws import AWSBaseResponse, SignedAWSConnection
 from libcloud.common.aws import DEFAULT_SIGNATURE_VERSION
 from libcloud.common.types import (InvalidCredsError, MalformedResponseError,
                                    LibcloudError)
-from libcloud.common.exceptions import BaseHTTPError
 from libcloud.compute.providers import Provider
 from libcloud.compute.base import Node, NodeDriver, NodeLocation, NodeSize
 from libcloud.compute.base import NodeImage, StorageVolume, VolumeSnapshot
 from libcloud.compute.base import KeyPair
 from libcloud.compute.types import NodeState, KeyPairDoesNotExistError, \
     StorageVolumeState, VolumeSnapshotState
-from libcloud.compute.constants import INSTANCE_TYPES, REGION_DETAILS
+from libcloud.compute.constants.ec2_region_details_partial import \
+    REGION_DETAILS as REGION_DETAILS_PARTIAL
 from libcloud.pricing import get_size_price
 
 __all__ = [
     'API_VERSION',
     'NAMESPACE',
-    'INSTANCE_TYPES',
     'OUTSCALE_INSTANCE_TYPES',
     'OUTSCALE_SAS_REGION_DETAILS',
     'OUTSCALE_INC_REGION_DETAILS',
@@ -94,7 +92,7 @@ DEFAULT_OUTSCALE_API_VERSION = '2016-04-01'
 OUTSCALE_NAMESPACE = 'http://api.outscale.com/wsdl/fcuext/2014-04-15/'
 
 # Add Nimbus region
-REGION_DETAILS['nimbus'] = {
+REGION_DETAILS_NIMBUS = {
     # Nimbus clouds have 3 EC2-style instance types but their particular
     # RAM allocations are configured by the admin
     'country': 'custom',
@@ -765,6 +763,10 @@ RESOURCE_EXTRA_ATTRIBUTES_MAP = {
         'ena_support': {
             'xpath': 'enaSupport',
             'transform_func': str
+        },
+        'sriov_net_support': {
+            'xpath': 'sriovNetSupport',
+            'transform_func': str
         }
     },
     'network': {
@@ -1065,10 +1067,6 @@ RESOURCE_EXTRA_ATTRIBUTES_MAP = {
         'vpc_id': {
             'xpath': 'vpcId',
             'transform_func': str
-        },
-        'default': {
-            'xpath': 'defaultForAz',
-            'transform_func': str
         }
     },
     'volume': {
@@ -1180,8 +1178,7 @@ VOLUME_MODIFICATION_ATTRIBUTE_MAP = {
     }
 }
 
-VALID_EC2_REGIONS = REGION_DETAILS.keys()
-VALID_EC2_REGIONS = [r for r in VALID_EC2_REGIONS if r != 'nimbus']
+VALID_EC2_REGIONS = REGION_DETAILS_PARTIAL.keys()
 VALID_VOLUME_TYPES = ['standard', 'io1', 'gp2', 'st1', 'sc1']
 
 
@@ -1249,7 +1246,7 @@ class EC2Connection(SignedAWSConnection):
     """
 
     version = API_VERSION
-    host = REGION_DETAILS['us-east-1']['endpoint']
+    host = REGION_DETAILS_PARTIAL['us-east-1']['endpoint']
     responseCls = EC2Response
     service_name = 'ec2'
 
@@ -1687,6 +1684,14 @@ class BaseEC2NodeDriver(NodeDriver):
         return nodes
 
     def list_sizes(self, location=None):
+        # NOTE: Those two imports are intentionally here and made lazy to
+        # avoid importing massive constant file in case it's not actually
+        # needed
+        from libcloud.compute.constants.ec2_region_details_complete import \
+            REGION_DETAILS
+        from libcloud.compute.constants.ec2_instance_types import \
+            INSTANCE_TYPES
+
         available_types = REGION_DETAILS[self.region_name]['instance_types']
         sizes = []
 
@@ -1968,11 +1973,13 @@ class BaseEC2NodeDriver(NodeDriver):
                                          % (availability_zone.name))
                 params['Placement.AvailabilityZone'] = availability_zone.name
 
+        if auth and ex_keyname:
+            raise AttributeError('Cannot specify auth and ex_keyname together')
+
         if auth:
             auth = self._get_and_check_auth(auth)
             # pylint: disable=no-member
-            key = self.ex_find_or_import_keypair_by_key_material(
-                auth.pubkey, ex_keyname)
+            key = self.ex_find_or_import_keypair_by_key_material(auth.pubkey)
             params['KeyName'] = key['keyName']
 
         if ex_keyname:
@@ -2111,7 +2118,7 @@ class BaseEC2NodeDriver(NodeDriver):
                             Service (AWS KMS) customer master key (CMK) to use
                             when creating the encrypted volume.
                             Example:
-                            arn:aws:kms:us-east-1:012345678910:key/abcd1234-a12
+                            arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123
                             -456a-a12b-a123b4cd56ef.
                             Only used if encrypted is set to True.
         :type ex_kms_key_id: ``str``
@@ -2309,13 +2316,7 @@ class BaseEC2NodeDriver(NodeDriver):
             'PublicKeyMaterial': base64key
         }
 
-        try:
-            response = self.connection.request(self.path, params=params)
-        except BaseHTTPError as e:
-            if 'InvalidKeyPair.Duplicate' in repr(e):
-                key_name = name + str(random.randrange(0, 1000))
-                params.update({'KeyName': key_name})
-                response = self.connection.request(self.path, params=params)
+        response = self.connection.request(self.path, params=params)
         elem = response.object
         key_pair = self._to_key_pair(elem=elem)
         return key_pair
@@ -2508,7 +2509,7 @@ class BaseEC2NodeDriver(NodeDriver):
         :type   client_data: ``dict``
 
         :param  client_token: The token to enable idempotency for VM
-                import requests.(optional)
+                              (optional)
         :type   client_token: ``str``
 
         :param  description: The description string for the
@@ -2652,7 +2653,8 @@ class BaseEC2NodeDriver(NodeDriver):
                           image_location=None, root_device_name=None,
                           block_device_mapping=None, kernel_id=None,
                           ramdisk_id=None, virtualization_type=None,
-                          ena_support=None):
+                          ena_support=None, billing_products=None,
+                          sriov_net_support=None):
         """
         Registers an Amazon Machine Image based off of an EBS-backed instance.
         Can also be used to create images from snapshots. More information
@@ -2696,6 +2698,14 @@ class BaseEC2NodeDriver(NodeDriver):
                                  Network Adapter for the AMI
         :type       ena_support: ``bool``
 
+        :param      billing_products: The billing product codes
+        :type       billing_products: ''list''
+
+        :param      sriov_net_support: Set to "simple" to enable enhanced
+                                       networking with the Intel 82599 Virtual
+                                       Function interface
+        :type       sriov_net_support: ``str``
+
         :rtype:     :class:`NodeImage`
         """
 
@@ -2729,6 +2739,13 @@ class BaseEC2NodeDriver(NodeDriver):
 
         if ena_support is not None:
             params['EnaSupport'] = ena_support
+
+        if billing_products is not None:
+            params.update(self._get_billing_product_params(
+                          billing_products))
+
+        if sriov_net_support is not None:
+            params['SriovNetSupport'] = sriov_net_support
 
         image = self._to_image(
             self.connection.request(self.path, params=params).object
@@ -2945,10 +2962,7 @@ class BaseEC2NodeDriver(NodeDriver):
                              namespace=NAMESPACE):
             name = findtext(element=group, xpath='groupName',
                             namespace=NAMESPACE)
-            id = findtext(element=group, xpath='groupId',
-                          namespace=NAMESPACE)
-            group = {'name': name, 'id': id}
-            groups.append(group)
+            groups.append(name)
 
         return groups
 
@@ -3489,12 +3503,6 @@ class BaseEC2NodeDriver(NodeDriver):
                                       params=params.copy()).object
 
         return self._get_boolean(res)
-
-    def ex_rename_node(self, node, name):
-        """
-        Rename a Node
-        """
-        return self.ex_create_tags(node, {'Name': name})
 
     def ex_get_metadata_for_node(self, node):
         """
@@ -4204,7 +4212,7 @@ class BaseEC2NodeDriver(NodeDriver):
         }
         return result
 
-    def ex_find_or_import_keypair_by_key_material(self, pubkey, key_name=None):
+    def ex_find_or_import_keypair_by_key_material(self, pubkey):
         """
         Given a public key, look it up in the EC2 KeyPair database. If it
         exists, return any information we have about it. Otherwise, create it.
@@ -4215,8 +4223,7 @@ class BaseEC2NodeDriver(NodeDriver):
         """
         key_fingerprint = get_pubkey_ssh2_fingerprint(pubkey)
         key_comment = get_pubkey_comment(pubkey, default='unnamed')
-        if not key_name:
-            key_name = '%s-%s' % (key_comment, key_fingerprint)
+        key_name = '%s-%s' % (key_comment, key_fingerprint)
 
         key_pairs = self.list_key_pairs()
         key_pairs = [key_pair for key_pair in key_pairs if
@@ -4759,6 +4766,13 @@ class BaseEC2NodeDriver(NodeDriver):
         # Build block device mapping
         block_device_mapping = self._to_device_mappings(element)
 
+        billing_products = []
+        for p in findall(element=element,
+                         xpath="billingProducts/item/billingProduct",
+                         namespace=NAMESPACE):
+
+            billing_products.append(p.text)
+
         # Get our tags
         tags = self._get_resource_tags(element)
 
@@ -4769,7 +4783,7 @@ class BaseEC2NodeDriver(NodeDriver):
         # Add our tags and block device mapping
         extra['tags'] = tags
         extra['block_device_mapping'] = block_device_mapping
-
+        extra['billing_products'] = billing_products
         return NodeImage(id=id, name=name, driver=self, extra=extra)
 
     def _to_volume(self, element, name=None):
@@ -5782,7 +5796,7 @@ class EC2NodeDriver(BaseEC2NodeDriver):
         if region not in valid_regions:
             raise ValueError('Invalid region: %s' % (region))
 
-        details = REGION_DETAILS[region]
+        details = REGION_DETAILS_PARTIAL[region]
         self.region_name = region
         self.token = token
         self.api_name = details['api_name']
@@ -5926,6 +5940,21 @@ class NimbusNodeDriver(BaseEC2NodeDriver):
     friendly_name = 'Nimbus Private Cloud'
     connectionCls = NimbusConnection
     signature_version = '2'
+
+    def list_sizes(self, location=None):
+        from libcloud.compute.constants.ec2_instance_types import \
+            INSTANCE_TYPES
+
+        available_types = REGION_DETAILS_NIMBUS['instance_types']
+        sizes = []
+
+        for instance_type in available_types:
+            attributes = INSTANCE_TYPES[instance_type]
+            attributes = copy.deepcopy(attributes)
+            attributes['price'] = None  # pricing not available
+            sizes.append(NodeSize(driver=self, **attributes))
+
+        return sizes
 
     def ex_describe_addresses(self, nodes):
         """

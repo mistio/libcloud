@@ -1184,6 +1184,12 @@ class OpenStack_1_1_Tests(unittest.TestCase, TestCaseMixin):
         self.assertEqual(size.id, size_id)
         self.assertEqual(size.name, '15.5GB slice')
 
+    def test_ex_get_size_extra_specs(self):
+        size_id = '7'
+        extra_specs = self.driver.ex_get_size_extra_specs(size_id)
+        self.assertEqual(extra_specs, {"hw:cpu_policy": "shared",
+                                       "hw:numa_nodes": "1"})
+
     def test_get_image(self):
         image_id = '13'
         image = self.driver.get_image(image_id)
@@ -2127,6 +2133,26 @@ class OpenStack_2_Tests(OpenStack_1_1_Tests):
         ret = self.driver.ex_remove_security_group_from_node(security_group, node)
         self.assertTrue(ret)
 
+    def test_force_net_url(self):
+        d = OpenStack_2_NodeDriver(
+            'user', 'correct_password',
+            ex_force_auth_version='2.0_password',
+            ex_force_auth_url='http://x.y.z.y:5000',
+            ex_force_network_url='http://network.com:9696',
+            ex_tenant_name='admin')
+        self.assertEqual(d._ex_force_base_url, None)
+
+    def test_ex_get_quota_set(self):
+        quota_set = self.driver.ex_get_quota_set("tenant_id")
+        self.assertEqual(quota_set.cores.limit, 20)
+        self.assertEqual(quota_set.cores.in_use, 1)
+        self.assertEqual(quota_set.cores.reserved, 0)
+
+    def test_ex_get_network_quota(self):
+        quota_set = self.driver.ex_get_network_quotas("tenant_id")
+        self.assertEqual(quota_set.floatingip.limit, 2)
+        self.assertEqual(quota_set.floatingip.in_use, 1)
+        self.assertEqual(quota_set.floatingip.reserved, 0)
 
 class OpenStack_1_1_FactoryMethodTests(OpenStack_1_1_Tests):
     should_list_locations = False
@@ -2788,10 +2814,27 @@ class OpenStack_1_1_MockHttp(MockHttp, unittest.TestCase):
             body = self.fixtures.load('_v2_0__router_interface.json')
             return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
 
+    def _v2_1337_os_quota_sets_tenant_id_detail(self, method, url, body, headers):
+        if method == 'GET':
+            body = self.fixtures.load('_v2_0__quota_set.json')
+            return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
+
+    def _v2_1337_flavors_7_os_extra_specs(self, method, url, body, headers):
+        if method == "GET":
+            body = self.fixtures.load('_flavor_extra_specs.json')
+            return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
+        else:
+            raise NotImplementedError()
+
     def _v2_1337_servers_1000_action(self, method, url, body, headers):
         if method != 'POST' or body != '{"removeSecurityGroup": {"name": "sgname"}}':
             raise NotImplementedError(body)
         return httplib.ACCEPTED, None, {}, httplib.responses[httplib.ACCEPTED]
+
+    def _v2_1337_v2_0_quotas_tenant_id_details_json(self, method, url, body, headers):
+        if method == 'GET':
+            body = self.fixtures.load('_v2_0__network_quota.json')
+            return (httplib.OK, body, self.json_content_headers, httplib.responses[httplib.OK])
 # This exists because the nova compute url in devstack has v2 in there but the v1.1 fixtures
 # work fine.
 

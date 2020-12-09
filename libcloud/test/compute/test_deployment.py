@@ -69,6 +69,9 @@ class MockClient(BaseSSHClient):
     def put(self, path, contents, chmod=755, mode='w'):
         return contents
 
+    def putfo(self, path, fo, chmod=755):
+        return fo.read()
+
     def run(self, cmd, timeout=None):
         if self.throw_on_timeout and timeout is not None:
             raise ValueError("timeout")
@@ -170,11 +173,11 @@ class DeploymentTests(unittest.TestCase):
         client.run.assert_called_once_with(FILE_PATH, timeout=None)
 
     def test_script_deployment_absolute_path(self):
-        client = Mock()
-        client.put.return_value = FILE_PATH
-        client.run.return_value = ('', '', 0)
-
         file_path = '{0}root{0}relative.sh'.format(os.path.sep)
+
+        client = Mock()
+        client.put.return_value = file_path
+        client.run.return_value = ('', '', 0)
 
         sd = ScriptDeployment(script='echo "foo"', name=file_path)
         sd.run(self.node, client)
@@ -182,11 +185,11 @@ class DeploymentTests(unittest.TestCase):
         client.run.assert_called_once_with(file_path, timeout=None)
 
     def test_script_deployment_with_arguments(self):
-        client = Mock()
-        client.put.return_value = FILE_PATH
-        client.run.return_value = ('', '', 0)
-
         file_path = '{0}root{0}relative.sh'.format(os.path.sep)
+
+        client = Mock()
+        client.put.return_value = file_path
+        client.run.return_value = ('', '', 0)
 
         args = ['arg1', 'arg2', '--option1=test']
         sd = ScriptDeployment(script='echo "foo"', args=args,
@@ -451,6 +454,41 @@ class DeploymentTests(unittest.TestCase):
             self.assertTrue(e.message.find('Command didn\'t finish') != -1)
         else:
             self.fail('Exception was not thrown')
+
+    def test_run_deployment_script_reconnect_on_ssh_session_not_active(self):
+        # Verify that we try to reconnect if task.run() throws exception with
+        # "SSH client not active" message
+        global exception_counter
+        exception_counter = 0
+
+        def mock_run(*args, **kwargs):
+            # Mock run() method which throws "SSH session not active" exception
+            # during first two calls and on third one it returns None.
+            global exception_counter
+
+            exception_counter += 1
+
+            if exception_counter > 2:
+                return None
+
+            raise Exception("SSH session not active")
+
+        task = Mock()
+        task.run = Mock()
+        task.run = mock_run
+        ssh_client = Mock()
+        ssh_client.timeout = 20
+
+        self.assertEqual(ssh_client.connect.call_count, 0)
+        self.assertEqual(ssh_client.close.call_count, 0)
+
+        self.driver._run_deployment_script(task=task,
+                                           node=self.node,
+                                           ssh_client=ssh_client,
+                                           max_tries=5)
+
+        self.assertEqual(ssh_client.connect.call_count, 2)
+        self.assertEqual(ssh_client.close.call_count, 2 + 1)
 
     @patch('libcloud.compute.base.SSHClient')
     @patch('libcloud.compute.ssh')

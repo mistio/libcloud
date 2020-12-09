@@ -124,10 +124,12 @@ DRIVERS = {
     ('libcloud.compute.drivers.ec2', 'OutscaleSASNodeDriver'),
     Provider.OUTSCALE_INC:
     ('libcloud.compute.drivers.ec2', 'OutscaleINCNodeDriver'),
-    Provider.VSPHERE:
-    ('libcloud.compute.drivers.vsphere', 'VSphereNodeDriver'),
+    Provider.OUTSCALE:
+    ('libcloud.compute.drivers.outscale', 'OutscaleNodeDriver'),
     Provider.PROFIT_BRICKS:
     ('libcloud.compute.drivers.profitbricks', 'ProfitBricksNodeDriver'),
+    Provider.VSPHERE:
+    ('libcloud.compute.drivers.vsphere', 'VSphereNodeDriver'),
     Provider.VULTR:
     ('libcloud.compute.drivers.vultr', 'VultrNodeDriver'),
     Provider.AURORACOMPUTE:
@@ -163,12 +165,6 @@ DRIVERS = {
     ('libcloud.compute.drivers.nttcis', 'NttCisNodeDriver'),
     Provider.SCALEWAY:
     ('libcloud.compute.drivers.scaleway', 'ScalewayNodeDriver'),
-    Provider.SOLUSVM:
-    ('libcloud.compute.drivers.solusvm', 'SolusVMNodeDriver'),
-    Provider.CLEARCENTER:
-    ('libcloud.compute.drivers.clearcenter', 'ClearCenterNodeDriver'),
-    Provider.CLEARAPI:
-    ('libcloud.compute.drivers.clearapi', 'ClearAPINodeDriver'),
     Provider.MAXIHOST:
     ('libcloud.compute.drivers.maxihost', 'MaxihostNodeDriver'),
     Provider.GRIDSCALE:

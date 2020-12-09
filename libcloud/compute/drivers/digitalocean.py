@@ -18,16 +18,15 @@ DigitalOcean Driver
 import json
 import warnings
 
-from libcloud.utils.iso8601 import parse_date
-from libcloud.utils.py3 import httplib
-
 from libcloud.common.digitalocean import DigitalOcean_v1_Error
 from libcloud.common.digitalocean import DigitalOcean_v2_BaseDriver
 from libcloud.common.types import InvalidCredsError
-from libcloud.compute.types import Provider, NodeState
-from libcloud.compute.base import NodeImage, NodeSize, NodeLocation, KeyPair
 from libcloud.compute.base import Node, NodeDriver
+from libcloud.compute.base import NodeImage, NodeSize, NodeLocation, KeyPair
 from libcloud.compute.base import StorageVolume, VolumeSnapshot
+from libcloud.compute.types import Provider, NodeState
+from libcloud.utils.iso8601 import parse_date
+from libcloud.utils.py3 import httplib
 
 __all__ = [
     'DigitalOceanNodeDriver',
@@ -146,7 +145,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         return list(map(self._to_volume, data))
 
     def create_node(self, name, size, image, location, ex_create_attr=None,
-                    ex_ssh_key_ids=None, ex_user_data=None, volumes=[]):
+                    ex_ssh_key_ids=None, ex_user_data=None):
         """
         Create a node.
 
@@ -180,9 +179,6 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         """
         attr = {'name': name, 'size': size.name, 'image': image.id,
                 'region': location.id, 'user_data': ex_user_data}
-
-        if volumes:
-            attr['volumes'] = volumes
 
         if ex_ssh_key_ids:
             warnings.warn("The ex_ssh_key_ids parameter has been deprecated in"
@@ -285,8 +281,10 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         return res.status == httplib.CREATED
 
     def ex_shutdown_node(self, node):
-        # NOTE: this method is here for backwards compatibility
-        return self.stop_node(node=node)
+        attr = {'type': 'shutdown'}
+        res = self.connection.request('/v2/droplets/%s/actions' % (node.id),
+                                      data=json.dumps(attr), method='POST')
+        return res.status == httplib.CREATED
 
     def ex_hard_reboot(self, node):
         attr = {'type': 'power_cycle'}
@@ -295,17 +293,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         return res.status == httplib.CREATED
 
     def ex_power_on_node(self, node):
-        # NOTE: this method is here for backwards compatibility
-        return self.start_node(node=node)
-
-    def start_node(self, node):
         attr = {'type': 'power_on'}
-        res = self.connection.request('/v2/droplets/%s/actions' % (node.id),
-                                      data=json.dumps(attr), method='POST')
-        return res.status == httplib.CREATED
-
-    def stop_node(self, node):
-        attr = {'type': 'shutdown'}
         res = self.connection.request('/v2/droplets/%s/actions' % (node.id),
                                       data=json.dumps(attr), method='POST')
         return res.status == httplib.CREATED
@@ -339,7 +327,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         :return True if the operation began successfully
         :rtype ``bool``
         """
-        attr = {'type': 'resize', 'size': size.id}
+        attr = {'type': 'resize', 'size': size.name}
         res = self.connection.request('/v2/droplets/%s/actions' % (node.id),
                                       data=json.dumps(attr), method='POST')
         return res.status == httplib.CREATED
@@ -388,8 +376,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
                                        qkey.extra['id']).object['ssh_key']
         return self._to_key_pair(data=data)
 
-    def create_volume(self, size, name, filesystem_type=None, location=None,
-                      snapshot=None):
+    def create_volume(self, size, name, location=None, snapshot=None):
         """
         Create a new volume.
 
@@ -411,8 +398,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         :return: The newly created volume.
         :rtype: :class:`StorageVolume`
         """
-        attr = {'name': name, 'size_gigabytes': size, 'region': location.id,
-                'filesystem_type': filesystem_type}
+        attr = {'name': name, 'size_gigabytes': size, 'region': location.id}
 
         res = self.connection.request('/v2/volumes', data=json.dumps(attr),
                                       method='POST')
@@ -669,10 +655,32 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
         for key in extra_keys:
             if key in data:
                 extra[key] = data[key]
-        extra['region'] = data.get('region', {}).get('slug')
-        node = Node(id=data['id'], name=data['name'], state=state,
-                    public_ips=public_ips, private_ips=private_ips,
-                    created_at=created, driver=self, extra=extra)
+        extra['region'] = data.get('region', {}).get('name')
+
+        # Untouched extra values, backwards compatibility
+        resolve_data = data.get('image')
+        if resolve_data:
+            image = self._to_image(resolve_data)
+        else:
+            image = None
+
+        resolve_data = extra.get('size')
+        if resolve_data:
+            size = self._to_size(resolve_data)
+        else:
+            size = None
+
+        node = Node(
+            id=data['id'],
+            name=data['name'],
+            state=state,
+            image=image,
+            size=size,
+            public_ips=public_ips,
+            private_ips=private_ips,
+            created_at=created,
+            driver=self,
+            extra=extra)
         return node
 
     def _to_image(self, data):
@@ -682,8 +690,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
                  'regions': data['regions'],
                  'min_disk_size': data['min_disk_size'],
                  'created_at': data['created_at']}
-        name = "%s %s" % (data.get('distribution'), data.get('name'))
-        return NodeImage(id=data['id'], name=name, driver=self,
+        return NodeImage(id=data['id'], name=data['name'], driver=self,
                          extra=extra)
 
     def _to_volume(self, data):
@@ -697,7 +704,7 @@ class DigitalOcean_v2_NodeDriver(DigitalOcean_v2_BaseDriver,
                              extra=extra)
 
     def _to_location(self, data):
-        extra = {'features': data.get('features', [])}
+        extra = data.get('features', [])
         return NodeLocation(id=data['slug'], name=data['name'], country=None,
                             extra=extra, driver=self)
 

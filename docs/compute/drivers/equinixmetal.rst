@@ -3,7 +3,7 @@ EquinixMetal Compute Driver Documentation
 
 `EquinixMetal`_ is a dedicated bare metal cloud hosting provider
 
-.. figure:: /_static/images/provider_logos/packet.png
+.. figure:: /_static/images/provider_logos/equinixmetal.png
     :align: center
     :width: 300
     :target: https://metal.equinix.com/

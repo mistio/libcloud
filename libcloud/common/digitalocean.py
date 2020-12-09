@@ -85,16 +85,15 @@ class DigitalOcean_v2_Connection(ConnectionKey):
         headers['Content-Type'] = 'application/json'
         return headers
 
-    def add_default_params(self, params, method):
+    def add_default_params(self, params):
         """
         Add parameters that are necessary for every request
 
-        This method adds ``per_page`` to the GET request to reduce the total
+        This method adds ``per_page`` to the request to reduce the total
         number of paginated requests to the API.
         """
         # pylint: disable=maybe-no-member
-        if method == 'GET':
-            params['per_page'] = self.driver.ex_per_page
+        params['per_page'] = self.driver.ex_per_page
         return params
 
 
@@ -113,6 +112,7 @@ class DigitalOceanBaseDriver(BaseDriver):
     """
     DigitalOcean BaseDriver
     """
+
     name = 'DigitalOcean'
     website = 'https://www.digitalocean.com'
 

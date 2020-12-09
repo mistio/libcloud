@@ -20,6 +20,7 @@ Provider                              list images get image create image delete 
 `Amazon EC2`_                         yes         yes       yes          yes          yes       
 `Enomaly Elastic Computing Platform`_ yes         no        no           no           no        
 `ElasticHosts`_                       yes         no        no           no           no        
+`EquinixMetal`_                       yes         no        no           no           no        
 `Eucalyptus`_                         yes         yes       yes          yes          yes       
 `Exoscale`_                           yes         no        no           no           no        
 `Gandi`_                              yes         no        no           no           no        
@@ -48,10 +49,10 @@ Provider                              list images get image create image delete 
 `1and1`_                              yes         yes       no           no           no        
 `OpenNebula (v3.8)`_                  yes         no        no           no           no        
 `OpenStack`_                          yes         yes       no           no           no        
+`Outscale API`_                       yes         yes       yes          yes          no        
 `Outscale INC`_                       yes         yes       yes          yes          yes       
 `Outscale SAS`_                       yes         yes       yes          yes          yes       
 `Ovh`_                                yes         yes       no           no           no        
-`Packet`_                             yes         no        no           no           no        
 `ProfitBricks`_                       yes         no        no           no           no        
 `Rackspace Cloud (Next Gen)`_         yes         yes       yes          yes          no        
 `Rackspace Cloud (First Gen)`_        yes         yes       yes          yes          no        
@@ -66,6 +67,7 @@ Provider                              list images get image create image delete 
 `vCloud`_                             yes         no        no           no           no        
 `Voxel VoxCLOUD`_                     yes         no        no           no           no        
 `vps.net`_                            yes         no        no           no           no        
+`VMware vSphere`_                     yes         no        no           no           no        
 `Vultr`_                              yes         no        no           no           no        
 ===================================== =========== ========= ============ ============ ==========
 
@@ -86,6 +88,7 @@ Provider                              list images get image create image delete 
 .. _`Amazon EC2`: http://aws.amazon.com/ec2/
 .. _`Enomaly Elastic Computing Platform`: http://www.enomaly.com/
 .. _`ElasticHosts`: http://www.elastichosts.com/
+.. _`EquinixMetal`: https://metal.equinix.com/
 .. _`Eucalyptus`: http://www.eucalyptus.com/
 .. _`Exoscale`: https://www.exoscale.com/
 .. _`Gandi`: http://www.gandi.net/
@@ -114,10 +117,10 @@ Provider                              list images get image create image delete 
 .. _`1and1`: http://www.1and1.com
 .. _`OpenNebula (v3.8)`: http://opennebula.org/
 .. _`OpenStack`: http://openstack.org/
+.. _`Outscale API`: http://www.outscale.com
 .. _`Outscale INC`: http://www.outscale.com
 .. _`Outscale SAS`: http://www.outscale.com
 .. _`Ovh`: https://www.ovh.com/
-.. _`Packet`: http://www.packet.com/
 .. _`ProfitBricks`: http://www.profitbricks.com
 .. _`Rackspace Cloud (Next Gen)`: http://www.rackspace.com
 .. _`Rackspace Cloud (First Gen)`: http://www.rackspace.com
@@ -132,4 +135,5 @@ Provider                              list images get image create image delete 
 .. _`vCloud`: http://www.vmware.com/products/vcloud/
 .. _`Voxel VoxCLOUD`: http://www.voxel.net/
 .. _`vps.net`: http://vps.net/
+.. _`VMware vSphere`: http://www.vmware.com/products/vsphere/
 .. _`Vultr`: https://www.vultr.com

@@ -20,6 +20,7 @@ Provider                              list key pairs get key pair create key pai
 `Amazon EC2`_                         yes            yes          yes             yes                           no                          yes            
 `Enomaly Elastic Computing Platform`_ no             no           no              no                            no                          no             
 `ElasticHosts`_                       no             no           no              no                            no                          no             
+`EquinixMetal`_                       yes            no           yes             no                            no                          yes            
 `Eucalyptus`_                         yes            yes          yes             yes                           no                          yes            
 `Exoscale`_                           yes            yes          yes             yes                           no                          yes            
 `Gandi`_                              yes            yes          no              yes                           no                          yes            
@@ -48,10 +49,10 @@ Provider                              list key pairs get key pair create key pai
 `1and1`_                              no             no           no              no                            no                          no             
 `OpenNebula (v3.8)`_                  no             no           no              no                            no                          no             
 `OpenStack`_                          no             no           no              no                            no                          no             
+`Outscale API`_                       yes            yes          yes             no                            no                          yes            
 `Outscale INC`_                       yes            yes          yes             yes                           no                          yes            
 `Outscale SAS`_                       yes            yes          yes             yes                           no                          yes            
 `Ovh`_                                yes            yes          no              yes                           no                          yes            
-`Packet`_                             yes            no           yes             no                            no                          yes            
 `ProfitBricks`_                       no             no           no              no                            no                          no             
 `Rackspace Cloud (Next Gen)`_         yes            yes          yes             yes                           no                          yes            
 `Rackspace Cloud (First Gen)`_        no             no           no              no                            no                          no             
@@ -66,6 +67,7 @@ Provider                              list key pairs get key pair create key pai
 `vCloud`_                             no             no           no              no                            no                          no             
 `Voxel VoxCLOUD`_                     no             no           no              no                            no                          no             
 `vps.net`_                            no             no           no              no                            no                          no             
+`VMware vSphere`_                     no             no           no              no                            no                          no             
 `Vultr`_                              yes            no           yes             no                            no                          yes            
 ===================================== ============== ============ =============== ============================= =========================== ===============
 
@@ -86,6 +88,7 @@ Provider                              list key pairs get key pair create key pai
 .. _`Amazon EC2`: http://aws.amazon.com/ec2/
 .. _`Enomaly Elastic Computing Platform`: http://www.enomaly.com/
 .. _`ElasticHosts`: http://www.elastichosts.com/
+.. _`EquinixMetal`: https://metal.equinix.com/
 .. _`Eucalyptus`: http://www.eucalyptus.com/
 .. _`Exoscale`: https://www.exoscale.com/
 .. _`Gandi`: http://www.gandi.net/
@@ -114,10 +117,10 @@ Provider                              list key pairs get key pair create key pai
 .. _`1and1`: http://www.1and1.com
 .. _`OpenNebula (v3.8)`: http://opennebula.org/
 .. _`OpenStack`: http://openstack.org/
+.. _`Outscale API`: http://www.outscale.com
 .. _`Outscale INC`: http://www.outscale.com
 .. _`Outscale SAS`: http://www.outscale.com
 .. _`Ovh`: https://www.ovh.com/
-.. _`Packet`: http://www.packet.com/
 .. _`ProfitBricks`: http://www.profitbricks.com
 .. _`Rackspace Cloud (Next Gen)`: http://www.rackspace.com
 .. _`Rackspace Cloud (First Gen)`: http://www.rackspace.com
@@ -132,4 +135,5 @@ Provider                              list key pairs get key pair create key pai
 .. _`vCloud`: http://www.vmware.com/products/vcloud/
 .. _`Voxel VoxCLOUD`: http://www.voxel.net/
 .. _`vps.net`: http://vps.net/
+.. _`VMware vSphere`: http://www.vmware.com/products/vsphere/
 .. _`Vultr`: https://www.vultr.com

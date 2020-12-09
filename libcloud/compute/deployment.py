@@ -26,6 +26,7 @@ from typing import IO
 from typing import cast
 
 import os
+import re
 import binascii
 
 from libcloud.utils.py3 import basestring, PY3
@@ -91,6 +92,13 @@ class SSHKeyDeployment(Deployment):
         client.put(".ssh/authorized_keys", contents=self.key, mode='a')
         return node
 
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        key = self.key[:100]
+        return ("<SSHKeyDeployment key=%s...>" % (key))
+
 
 class FileDeployment(Deployment):
     """
@@ -119,11 +127,16 @@ class FileDeployment(Deployment):
         perms = int(oct(os.stat(self.source).st_mode)[4:], 8)
 
         with open(self.source, 'rb') as fp:
-            content = fp.read()
-
-        client.put(path=self.target, chmod=perms,
-                   contents=content)
+            client.putfo(path=self.target, chmod=perms,
+                         fo=fp)
         return node
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return ("<FileDeployment source=%s, target=%s>" % (
+            self.source, self.target))
 
 
 class ScriptDeployment(Deployment):
@@ -195,11 +208,15 @@ class ScriptDeployment(Deployment):
         self.name = cast(str, self.name)
         file_path = client.put(path=self.name, chmod=int('755', 8),
                                contents=self.script)
-
         # Pre-pend cwd if user specified a relative path
-        if self.name and self.name[0] != '/':
+        if self.name and (self.name[0] not in ['/', '\\'] and
+                          not re.match(r"^\w\:.*$", file_path)):
             base_path = os.path.dirname(file_path)
             name = os.path.join(base_path, self.name)
+        elif self.name and (self.name[0] == '\\' or
+                            re.match(r"^\w\:.*$", file_path)):
+            # Absolute Windows path
+            name = file_path
         else:
             self.name = cast(str, self.name)
             name = self.name
@@ -325,3 +342,16 @@ class MultiStepDeployment(Deployment):
         for s in self.steps:
             node = s.run(node, client)
         return node
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        steps = []
+
+        for step in self.steps:
+            steps.append(str(step))
+
+        steps = ', '.join(steps)
+
+        return ("<MultiStepDeployment steps=[%s]>" % (steps))
