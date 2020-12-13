@@ -443,7 +443,12 @@ def _list_async(driver):
                             driver=self, extra=extra)
 
     def _to_size(self, data):
-        cpus = data['specs']['cpus'][0].get('count')
+        try:
+            cpus = data['specs']['cpus'][0].get('count')
+        except KeyError:
+            cpus = None
+        regions = [region.get('href').replace('/facilities/', '')
+                   for region in data.get('available_in')]
         extra = {'description': data['description'], 'line': data['line'],
                  'cpus': cpus}
 

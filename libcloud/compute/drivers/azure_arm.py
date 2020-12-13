@@ -795,7 +795,7 @@ class AzureNodeDriver(NodeDriver):
         vhd = node.extra["properties"]["storageProfile"]["osDisk"].get("vhd")
         if ex_destroy_vhd and vhd is not None:
             retries = ex_poll_qty
-            resourceGroup = node.id.split("/")[4]
+            resourceGroup = node.extra['id'].split("/")[4]
             while retries > 0:
                 try:
                     if self._ex_delete_old_vhd(resourceGroup, vhd["uri"]):
@@ -2014,9 +2014,9 @@ class AzureNodeDriver(NodeDriver):
         :type deallocate: ``bool``
         """
         if ex_deallocate:
-            target = "%s/deallocate" % node.id
+            target = "%s/deallocate" % node.extra['id']
         else:
-            target = "%s/powerOff" % node.id
+            target = "%s/powerOff" % node.extra['id']
         r = self.connection.request(target,
                                     params={"api-version": "2015-06-15"},
                                     method='POST')
@@ -2113,7 +2113,7 @@ class AzureNodeDriver(NodeDriver):
 
         name = "init"
 
-        target = node.id + "/extensions/" + name
+        target = node.extra['id'] + "/extensions/" + name
 
         data = {
             "location": location.id,
@@ -2219,6 +2219,7 @@ class AzureNodeDriver(NodeDriver):
                         addr = pub_addr.extra.get("ipAddress")
                         if addr:
                             public_ips.append(addr)
+                    subnet = n.extra["ipConfigurations"][0]["properties"]["subnet"].get("id")
                 except BaseHTTPError:
                     pass
 
@@ -2238,8 +2239,66 @@ class AzureNodeDriver(NodeDriver):
             elif ps == "succeeded":
                 state = NodeState.RUNNING
 
-        node = Node(data["id"],
-                    data["name"],
+        extra = {}
+        extra['location'] = data.get('location','')
+        try:
+            extra['storageUri'] = data['properties']['diagnosticsProfile']['bootDiagnostics']['storageUri']
+        except:
+            pass
+
+        extra['storageProfile'] = data['properties'].get('storageProfile')
+        extra['size'] = data['properties'].get('hardwareProfile', {}).get('vmSize')
+        extra['osProfile'] = data['properties'].get('osProfile')
+        extra['osDisk'] = data['properties'].get('storageProfile', {}).get('osDisk')
+        try:
+            extra['system_vhd'] = extra['osDisk']['vhd']['uri']
+        except:
+            pass
+        try:
+            # not sure if this is Linux/Windows or if other values exist
+            extra['os_type'] = extra['osDisk']['osType'].lower()
+        except:
+            extra['os_type'] = 'linux'
+            pass
+        try:
+            extra['adminUsername'] = extra['osProfile']['adminUsername']
+        except:
+            pass
+        try:
+            extra['image'] = extra['storageProfile']['imageReference']['offer']
+        except:
+            pass
+        for datadisk in extra['storageProfile']['dataDisks']:
+            try:
+                extra['disk-%s' % datadisk['name']] = "%sGB - %s" % (datadisk['diskSizeGB'], datadisk['vhd']['uri'])
+            except:
+                pass
+
+        extra["networkProfile"] = data['properties']["networkProfile"]["networkInterfaces"]
+        extra["subnet"] = subnet
+
+        subscription = re.search(r"/subscriptions/(.*?)/resourceGroups", data['id'])
+        if subscription:
+            extra['subscription'] = subscription.group(1)
+
+        resource_group = re.search(r"/resourceGroups/(.*?)/providers", data['id'])
+        if resource_group:
+            extra['resource_group'] = resource_group.group(1)
+
+        extra['id'] = data["id"]
+        os_type = extra['os_type']
+        price_size = "".join(extra['size'].lower().split("_"))
+        try:
+            price = get_size_price(driver_type='compute',
+                                   driver_name='azure_%s' % os_type,
+                                   size_id=price_size,
+                                   region=extra.get('location', 'eastus'))
+        except Exception:
+            price = 0
+
+        extra['cost_per_hour'] = price
+        node = Node(data['properties']['vmId'],
+                    data['name'],
                     state,
                     public_ips,
                     private_ips,

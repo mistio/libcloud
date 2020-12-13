@@ -35,7 +35,24 @@
               "nics": [{"count":2,"type":"gigabit"}],
               "features": {"raid":true, "txt":true}
             },
-          "pricing": { "hour":0.4 }
+          "legacy": false,
+          "deployment_types": [
+          "on_demand",
+          "spot_market"
+        ],
+          "available_in": [
+            {
+              "href": "/facilities/2b70eb8f-fa18-47c0-aba7-222a842362fd"
+            },
+            {
+              "href": "/facilities/8ea03255-89f9-4e62-9d3f-8817db82ceed"
+            },
+            {
+              "href": "/facilities/8e6470b3-b75e-47d1-bb93-45b225750975"
+            }
+          ],
+          "class": "c1.small.x86",
+            "pricing": { "hour":0.4 }
         },
       "ip_addresses": [
         { "address_family": 4,"netmask":"255.255.255.255","cidr":32,"address":"147.75.255.255","gateway":"147.75.255.255","public":true },
