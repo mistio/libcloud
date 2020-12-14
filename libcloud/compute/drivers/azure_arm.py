@@ -860,7 +860,7 @@ class AzureNodeDriver(NodeDriver):
             vhd = None
         if ex_destroy_vhd and vhd is not None:
             retries = ex_poll_qty
-            resourceGroup = node.id.split("/")[4]
+            resourceGroup = node.extra['id'].split("/")[4]
             while retries > 0:
                 try:
                     if self._ex_delete_old_vhd(resourceGroup, vhd["uri"]):
@@ -2190,9 +2190,9 @@ class AzureNodeDriver(NodeDriver):
         :type deallocate: ``bool``
         """
         if ex_deallocate:
-            target = "%s/deallocate" % node.id
+            target = "%s/deallocate" % node.extra['id']
         else:
-            target = "%s/powerOff" % node.id
+            target = "%s/powerOff" % node.extra['id']
         r = self.connection.request(target,
                                     params={"api-version": "2015-06-15"},
                                     method='POST')
@@ -2289,7 +2289,7 @@ class AzureNodeDriver(NodeDriver):
 
         name = "init"
 
-        target = node.id + "/extensions/" + name
+        target = node.extra['id'] + "/extensions/" + name
 
         data = {
             "location": location.id,
@@ -2406,6 +2406,7 @@ class AzureNodeDriver(NodeDriver):
                         addr = pub_addr.extra.get("ipAddress")
                         if addr:
                             public_ips.append(addr)
+                    subnet = n.extra["ipConfigurations"][0]["properties"]["subnet"].get("id")
                 except BaseHTTPError:
                     pass
 
@@ -2462,6 +2463,7 @@ class AzureNodeDriver(NodeDriver):
                 pass
 
         extra["networkProfile"] = data['properties']["networkProfile"]["networkInterfaces"]
+        extra["subnet"] = subnet
 
         subscription = re.search(r"/subscriptions/(.*?)/resourceGroups", data['id'])
         if subscription:
