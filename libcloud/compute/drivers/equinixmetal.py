@@ -436,7 +436,11 @@ def _list_async(driver):
         return node
 
     def _to_image(self, data):
-        extra = {'distro': data['distro'], 'version': data['version']}
+        extra = {
+            'distro': data['distro'],
+            'version': data['version'],
+            'provisionable_on': data.get('provisionable_on', [])
+        }
         return NodeImage(id=data['slug'], name=data['name'], extra=extra,
                          driver=self)
 
@@ -451,7 +455,7 @@ def _list_async(driver):
             cpus = data['specs']['cpus'][0].get('count')
         except KeyError:
             cpus = None
-        regions = [region.get('href').replace('/facilities/', '')
+        regions = [region.get('href').replace('/metal/v1/facilities/', '')
                    for region in data.get('available_in')]
         extra = {'description': data['description'], 'line': data['line'],
                  'cpus': cpus, 'regions': regions}
