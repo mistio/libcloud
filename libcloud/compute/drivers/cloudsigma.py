@@ -42,6 +42,7 @@ from libcloud.compute.types import NodeState, Provider
 from libcloud.compute.base import NodeDriver, NodeSize, Node
 from libcloud.compute.base import NodeImage
 from libcloud.compute.base import is_private_subnet
+from libcloud.compute.base import KeyPair
 from libcloud.utils.iso8601 import parse_date
 from libcloud.utils.misc import get_secure_random_string
 
@@ -1065,7 +1066,9 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         return images
 
     def create_node(self, name, size, image, ex_metadata=None,
-                    ex_vnc_password=None, ex_avoid=None, ex_vlan=None):
+                    ex_vnc_password=None, ex_avoid=None, ex_vlan=None,
+                    public_keys=None):
+
         """
         Create a new server.
 
@@ -1100,6 +1103,9 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
                         server will have two nics assigned - 1 with a public ip
                         and 1 with the provided VLAN.
         :type ex_vlan: ``str``
+        
+        :param public_keys: Optional list of SSH key UUIDs
+        :type public_keys: ``list`` of ``str`` 
         """
         is_installation_cd = self._is_installation_cd(image=image)
 
@@ -1141,6 +1147,9 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         data['cpu'] = size.cpu
         data['mem'] = (size.ram * 1024 * 1024)
         data['vnc_password'] = vnc_password
+
+        if public_keys:
+            data['pubkeys'] = public_keys
 
         if ex_metadata:
             data['meta'] = ex_metadata
@@ -1859,6 +1868,93 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         capabilities = response.object
         return capabilities
 
+    def list_key_pairs(self):
+        """
+        List all the available key pair objects.
+
+        :rtype: ``list`` of :class:`KeyPair` objects
+        """
+        action = '/keypairs'
+        response = self.connection.request(action=action, method='GET').object
+
+        keys = [self._to_key_pair(data=item) for item in response['objects']]
+
+        return keys
+
+    def get_key_pair(self, key_uuid):
+        """
+        Retrieve a single key pair.
+
+        :param name: The uuid of the key pair to retrieve.
+        :type name: ``str``
+
+        :rtype: :class:`.KeyPair`
+        """
+        action = '/keypairs/%s/' % (key_uuid)
+        response = self.connection.request(action=action, method='GET').object
+
+        return self._to_key_pair(response)
+
+    def create_key_pair(self, name):
+        """
+        Create a new SSH key.
+
+        :param name: Key pair name.
+        :type name: ``str``
+        """
+
+        action = '/keypairs/'
+        data = {
+            'objects': [
+                {
+                    "name": name
+                }
+            ]
+        }
+        response = self.connection.request(action=action, method='POST',
+                                           data=data).object
+        return self._to_key_pair(response['objects'][0])
+
+    def import_key_pair_from_string(self, name, key_material):
+        # type: (str, str) -> KeyPair
+        """
+        Import a new public key from string.
+
+        :param name: Key pair name.
+        :type name: ``str``
+
+        :param key_material: Public key material.
+        :type key_material: ``str``
+
+        :rtype: :class:`.KeyPair` object
+        """
+        action = '/keypairs/'
+        data = {
+            'objects': [
+                {
+                    "name": name,
+                    "public_key": key_material.replace('\n', '')
+                }
+            ]
+        }
+        response = self.connection.request(action=action, method='POST',
+                                           data=data).object
+        return self._to_key_pair(response['objects'][0])
+
+    def delete_key_pair(self, key_pair):
+        """
+        Delete an existing key pair.
+
+        :param key_pair: Key pair object
+        :type key_pair: :class:`.KeyPair`
+
+        :rtype: ``bool``
+        """
+        action = '/keypairs/%s/' % (key_pair.extra['uuid'])
+        response = self.connection.request(action=action,
+                                           method='DELETE')
+        return response.status == 204
+
     def _parse_ips_from_nic(self, nic):
         """
         Parse private and public IP addresses from the provided network
@@ -2017,6 +2113,18 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         policy = CloudSigmaFirewallPolicy(id=data['uuid'], name=data['name'],
                                           rules=rules)
         return policy
+
+    def _to_key_pair(self, data):
+        extra = {
+            'uuid': data['uuid'],
+            'tags': data['tags'],
+            'resource_uri': data['resource_uri'],
+            'permissions': data['permissions'],
+            'meta': data['meta'],
+        }
+        return KeyPair(name=data['name'], public_key=data['public_key'],
+                       fingerprint=data['fingerprint'], driver=self,
+                       private_key=data['private_key'], extra=extra)
 
     def _perform_action(self, path, action, method='POST', params=None,
                         data=None):
