@@ -2011,7 +2011,7 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         return public_ips, private_ips
 
     def _to_node(self, data):
-        extra_keys = ['cpu', 'mem', 'nics', 'vnc_password', 'meta']
+        extra_keys = ['cpu', 'mem', 'nics', 'vnc_password', 'meta', 'runtime']
 
         id = data['uuid']
         name = data['name']
@@ -2020,7 +2020,6 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         public_ips = []
         private_ips = []
         extra = self._extract_values(obj=data, keys=extra_keys)
-
         for nic in data['nics']:
             _public_ips, _private_ips = self._parse_ips_from_nic(nic=nic)
 
