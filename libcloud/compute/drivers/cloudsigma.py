@@ -104,6 +104,7 @@ class CloudSigmaNodeSize(NodeSize):
         self.bandwidth = bandwidth
         self.price = price
         self.driver = driver
+        self.extra = {}
 
     def __repr__(self):
         return (('<NodeSize: id=%s, name=%s, cpu=%s, ram=%s disk=%s '
