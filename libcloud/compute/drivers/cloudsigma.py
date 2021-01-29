@@ -2064,6 +2064,15 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         public_ips = []
         private_ips = []
         extra = self._extract_values(obj=data, keys=extra_keys)
+        # find image
+        image = None
+        for item in extra['drives']:
+            if item['boot_order'] == 1:
+                drive = self.ex_get_drive(item['drive']['uuid'])
+                image = '{} {}'.format(drive.extra.get('distribution', ''),
+                                       drive.extra.get('version', ''))
+                break
+
         for nic in data['nics']:
             _public_ips, _private_ips = self._parse_ips_from_nic(nic=nic)
 
@@ -2071,7 +2080,8 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
             private_ips.extend(_private_ips)
 
         node = Node(id=id, name=name, state=state, public_ips=public_ips,
-                    private_ips=private_ips, driver=self, extra=extra)
+                    image=image, private_ips=private_ips, driver=self,
+                    extra=extra)
         return node
 
     def _to_image(self, data):
