@@ -1369,7 +1369,7 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         drives = [self._to_drive(data=item) for item in response['objects']]
         return drives
 
-    def ex_list_user_drives(self):
+    def list_volumes(self):
         """
         Return a list of all the available user's drives.
 
@@ -1379,14 +1379,14 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         drives = [self._to_drive(data=item) for item in response['objects']]
         return drives
 
-    def ex_create_drive(self, name, size, media='disk', ex_avoid=None):
+    def create_volume(self, name, size, media='disk', ex_avoid=None):
         """
         Create a new drive.
 
         :param name: Drive name.
         :type name: ``str``
 
-        :param size: Drive size in bytes.
+        :param size: Drive size in GBs.
         :type size: ``int``
 
         :param media: Drive media type (cdrom, disk).
@@ -1405,7 +1405,7 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         params = {}
         data = {
             'name': name,
-            'size': size,
+            'size': size * 1024 * 1024 * 1024,
             'media': media
         }
 
@@ -1475,12 +1475,55 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         drive = self._to_drive(data=response.object['objects'][0])
         return drive
 
-    def ex_attach_drive(self, node):
+    def attach_volume(self, node, volume):
         """
-        Attach a drive to the provided node.
+        :param node: Node to attach volume to.
+        :type node: :class:`.Node`
+
+        :param volume: Volume to attach.
+        :type volume: :class:`.StorageVolume`
+
+        :param device: Where the device is exposed, e.g. '/dev/sdb'
+        :type device: ``str``
+
+        :rytpe: ``bool``
+
+        PUT /servers/{uuid}/
+
+        data = {
+            'drives': [
+                {
+                    'boot_order': None,
+                    'dev_channel': '0:0',
+                    'device': 'virtio',
+                    'drive': str(volume.id)
+                }
+            ],
+            'vnc_password': node.extra['vnc_password'],
+            'mem': node.extra['mem'],
+            'cpu': node.extra['cpu'],
+            'name': node.name,
+        }
         """
-        # TODO
-        pass
+        data = {
+            'drives': [
+                {
+                    'boot_order': None,
+                    'dev_channel': '0:0',
+                    'device': 'virtio',
+                    'drive': str(volume.id)
+                }
+            ],
+            'vnc_password': node.extra['vnc_password'],
+            'mem': node.extra['mem'],
+            'cpu': node.extra['cpu'],
+            'name': node.name,
+        }
+        action = '/servers/%s/' % (node.id)
+        response = self.connection.request(action=action, data=data,
+                                           method='PUT')
+
+        return response.status == 200
 
     def ex_get_drive(self, drive_id):
         """
@@ -2011,7 +2054,8 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         return public_ips, private_ips
 
     def _to_node(self, data):
-        extra_keys = ['cpu', 'mem', 'nics', 'vnc_password', 'meta', 'runtime']
+        extra_keys = ['cpu', 'mem', 'nics', 'vnc_password', 'meta', 'runtime',
+                      'drives']
 
         id = data['uuid']
         name = data['name']
@@ -2044,12 +2088,12 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
     def _to_drive(self, data):
         id = data['uuid']
         name = data['name']
-        size = data['size']
+        size = int(data['size'] / 1024 / 1024 / 1024)
         media = data['media']
         status = data['status']
         extra = {
-            'mounted_on': data['mounted_on'],
-            'storage_type': data['storage_type'],
+            'mounted_on': data.get('mounted_on', []),
+            'storage_type': data.get('storage_type', ''),
             'distribution': data['meta'].get('distribution', ''),
             'version': data['meta'].get('version', ''),
             'os': data['meta'].get('os', ''),
