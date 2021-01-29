@@ -1104,9 +1104,9 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
                         server will have two nics assigned - 1 with a public ip
                         and 1 with the provided VLAN.
         :type ex_vlan: ``str``
-        
+
         :param public_keys: Optional list of SSH key UUIDs
-        :type public_keys: ``list`` of ``str`` 
+        :type public_keys: ``list`` of ``str``
         """
         is_installation_cd = self._is_installation_cd(image=image)
 
@@ -2047,7 +2047,16 @@ class CloudSigma_2_0_NodeDriver(CloudSigmaNodeDriver):
         size = data['size']
         media = data['media']
         status = data['status']
-        extra = {}
+        extra = {
+            'mounted_on': data['mounted_on'],
+            'storage_type': data['storage_type'],
+            'distribution': data['meta'].get('distribution', ''),
+            'version': data['meta'].get('version', ''),
+            'os': data['meta'].get('os', ''),
+            'paid': data['meta'].get('paid', ''),
+            'architecture': data['meta'].get('arch', ''),
+            'created_at': data['meta'].get('created_at', ''),
+        }
 
         drive = CloudSigmaDrive(id=id, name=name, size=size, media=media,
                                 status=status, driver=self, extra=extra)
